@@ -4,6 +4,8 @@
 #include <vector>
 
 #include "GameOfLife/Cell.h"
+#include "GameOfLife/InitialState.h"
+#include "GameOfLife/GameRunner.h"
 
 void PrintUsage(const std::string& programName)
 {
@@ -26,19 +28,22 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    std::vector<GameOfLife::Cell> state;
+    GameOfLife::InitialState state;
 
     char paren, comma;
     int64_t cellX, cellY;
 
     while ((in >> paren >> cellX >> comma >> cellY >> paren) && paren == ')' && comma == ',')
     {
-        state.emplace_back(cellX, cellY);
-
-        auto& b = state.back();
-        std::cout << std::get<0>(b) << " " << std::get<1>(b) << std::endl; // temp
+        state.emplace_back(cellX, cellY, false);
     }
 
-    std::cin.get();
+    GameOfLife::GameRunner runner(state);
+
+    //
+    // I expect a ctrl+c, yo
+    //
+    while (runner.Tick());
+
     return 0;
 }

@@ -7,9 +7,20 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="GameOfLife\GameRunner.cpp" />
+    <ClCompile Include="GameOfLife\State.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameOfLife\Cell.h">
+      <Filter>GameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLife\GameRunner.h">
+      <Filter>GameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLife\InitialState.h">
+      <Filter>GameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLife\State.h">
       <Filter>GameOfLife</Filter>
     </ClInclude>
   </ItemGroup>
