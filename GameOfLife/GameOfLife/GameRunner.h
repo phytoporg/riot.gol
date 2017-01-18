@@ -31,10 +31,6 @@ namespace GameOfLife
         //
         const State& CurrentState() const;
 
-        //
-        // TODO: Console draw this thing to validate.
-        //
-
     private:
         GameRunner() = delete; // This the right thing, here?
         GameRunner(const GameRunner& other) = delete;

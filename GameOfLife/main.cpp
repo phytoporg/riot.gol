@@ -6,6 +6,7 @@
 #include "GameOfLife/Cell.h"
 #include "GameOfLife/InitialState.h"
 #include "GameOfLife/GameRunner.h"
+#include "GameOfLife/ConsoleStateRenderer.h"
 
 void PrintUsage(const std::string& programName)
 {
@@ -43,7 +44,13 @@ int main(int argc, char** argv)
     //
     // I expect a ctrl+c, yo
     //
-    while (runner.Tick());
+    GameOfLife::ConsoleStateRenderer renderer;
+    do
+    {
+        const auto& state = runner.CurrentState();
+        renderer.Draw(state);
+        std::cin.get();
+    } while (runner.Tick());
 
     return 0;
 }

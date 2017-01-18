@@ -66,13 +66,16 @@ namespace GameOfLife
 
     bool GameRunner::Tick()
     {
-        int64_t x = m_pCurrentState->XMin();
-        int64_t y = m_pCurrentState->YMin();
+        const int64_t xMin = m_pCurrentState->XMin();
+        const int64_t yMin = m_pCurrentState->YMin();
+
+        int64_t x = xMin;
+        int64_t y = yMin;
 
         State* pOtherBuffer = OtherBuffer(m_pCurrentState, m_spStates[0], m_spStates[1]);
-        for (; y < m_pCurrentState->Height(); ++y)
+        for (; y < yMin + m_pCurrentState->Height(); ++y)
         {
-            for (; x < m_pCurrentState->Width(); ++x)
+            for (; x < xMin + m_pCurrentState->Width(); ++x)
             {
                 const uint8_t NumNeighbors = CountNeighbors(*m_pCurrentState, x, y);
                 if (m_pCurrentState->GetCellState(x, y))

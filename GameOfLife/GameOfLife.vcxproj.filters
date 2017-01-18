@@ -9,6 +9,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="GameOfLife\GameRunner.cpp" />
     <ClCompile Include="GameOfLife\State.cpp" />
+    <ClCompile Include="GameOfLife\ConsoleStateRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameOfLife\Cell.h">
@@ -21,6 +22,9 @@
       <Filter>GameOfLife</Filter>
     </ClInclude>
     <ClInclude Include="GameOfLife\State.h">
+      <Filter>GameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLife\ConsoleStateRenderer.h">
       <Filter>GameOfLife</Filter>
     </ClInclude>
   </ItemGroup>
