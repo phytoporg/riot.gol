@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cctype> // tolower
 
 #include "GameOfLife/Cell.h"
 #include "GameOfLife/InitialState.h"
@@ -49,7 +50,12 @@ int main(int argc, char** argv)
     {
         const auto& state = runner.CurrentState();
         renderer.Draw(state);
-        std::cin.get();
+
+        char c = std::cin.get();
+        if (std::tolower(c) == 'q')
+        {
+            break;
+        }
     } while (runner.Tick());
 
     return 0;

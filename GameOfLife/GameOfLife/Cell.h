@@ -2,7 +2,6 @@
 
 #include <tuple>
 #include <cstdint>
-#include <stdint.h>
 
 namespace GameOfLife
 {

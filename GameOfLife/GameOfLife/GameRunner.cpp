@@ -69,13 +69,10 @@ namespace GameOfLife
         const int64_t xMin = m_pCurrentState->XMin();
         const int64_t yMin = m_pCurrentState->YMin();
 
-        int64_t x = xMin;
-        int64_t y = yMin;
-
         State* pOtherBuffer = OtherBuffer(m_pCurrentState, m_spStates[0], m_spStates[1]);
-        for (; y < yMin + m_pCurrentState->Height(); ++y)
+        for (int64_t y = yMin; y < yMin + m_pCurrentState->Height(); ++y)
         {
-            for (; x < xMin + m_pCurrentState->Width(); ++x)
+            for (int64_t x = xMin; x < xMin + m_pCurrentState->Width(); ++x)
             {
                 const uint8_t NumNeighbors = CountNeighbors(*m_pCurrentState, x, y);
                 if (m_pCurrentState->GetCellState(x, y))
@@ -104,16 +101,16 @@ namespace GameOfLife
         }
 
         //
-        // Swap()
+        // Swap buffers
         //
-        m_pCurrentState = OtherBuffer(m_pCurrentState, m_spStates[0], m_spStates[1]);
+        m_pCurrentState = pOtherBuffer;
 
         return true;
     }
 
     const State& GameRunner::CurrentState() const
     {
-        assert(m_pCurrentState);
+        assert(m_pCurrentState == m_spStates[0].get() || m_pCurrentState == m_spStates[1].get());
         return *m_pCurrentState;
     }
 }
