@@ -43,11 +43,19 @@ namespace GameOfLife
         // Make a first pass and clear out the whole grid, then set cells
         // which are alive according to the subgrid values.
         //
-        for (int64_t y = state.YMin(); y < state.YMin() + state.Height(); y++)
         {
-            for (int64_t x = state.XMin(); x < state.XMin() + state.Width(); x++)
+            const int64_t xMin = state.XMin();
+            const int64_t yMin = state.YMin();
+
+            for (int64_t y = yMin; y < yMin + state.Height(); y++)
             {
-                m_spPimpl->WriteCharacter('-');
+                for (int64_t x = xMin; x < xMin + state.Width(); x++)
+                {
+                    int cursorX = static_cast<int>(y - yMin);
+                    int cursorY = static_cast<int>(x - xMin);
+                    m_spPimpl->SetCursorPosition(cursorX, cursorY);
+                    m_spPimpl->WriteCharacter('-');
+                }
             }
         }
 
@@ -57,19 +65,15 @@ namespace GameOfLife
             const int64_t xMin = subgrid.XMin();
             const int64_t yMin = subgrid.YMin();
 
-            const int64_t Width = subgrid.Width();
-            const int64_t Height = subgrid.Height();
-
-            for (int64_t y = yMin; y < yMin + Height; ++y)
+            for (int64_t y = yMin; y < yMin + subgrid.Height(); ++y)
             {
-                for (int64_t x = xMin; x < xMin + Width; ++x)
+                for (int64_t x = xMin; x < xMin + subgrid.Width(); ++x)
                 {
-                    int cursorX = static_cast<int>(y - yMin);
-                    int cursorY = static_cast<int>(x - xMin);
-                    m_spPimpl->SetCursorPosition(cursorX, cursorY);
-                    
                     if (subgrid.GetCellState(x, y))
                     {
+                        int cursorX = static_cast<int>(y - yMin);
+                        int cursorY = static_cast<int>(x - xMin);
+                        m_spPimpl->SetCursorPosition(cursorX, cursorY);
                         m_spPimpl->WriteCharacter('+');
                     }
                 }

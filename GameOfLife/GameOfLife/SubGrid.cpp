@@ -219,5 +219,7 @@ namespace GameOfLife
                 }
             }
         }
+
+        m_pCurrentCellGrid = pOtherGrid;
     }
 }
