@@ -43,7 +43,7 @@ int main(int argc, char** argv)
     GameOfLife::GameRunner runner(state);
 
     //
-    // I expect a ctrl+c, yo
+    // I expect a ctrl+c, yo. TODO: handle that sigint
     //
     GameOfLife::ConsoleStateRenderer renderer;
     do

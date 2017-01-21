@@ -4,66 +4,17 @@
 
 #include <cassert>
 
-namespace
-{
-    GameOfLife::State* 
-    OtherBuffer(
-        GameOfLife::State* pState,
-        const std::unique_ptr<GameOfLife::State>& spFirst,
-        const std::unique_ptr<GameOfLife::State>& spSecond
-    )
-    {
-        return pState == spFirst.get() ? spSecond.get() : spFirst.get();
-    }
-
-    uint8_t CountNeighbors(const GameOfLife::State& state, int64_t x, int64_t y)
-    {
-        uint8_t neighbors = 0;
-
-        for (int64_t dy = -1; dy <= 1; ++dy)
-        {
-            for (int64_t dx = -1; dx <= 1; ++dx)
-            {
-                if (!dx && !dy) 
-                {
-                    //
-                    // Don't count self!
-                    //
-                    continue; 
-                }
-
-                if (state.GetCellState(x + dx, y + dy))
-                {
-                    neighbors++;
-                }
-            }
-        }
-
-        return neighbors;
-    }
-}
-
 namespace GameOfLife
 {
     //
     // Internal state representation
     //
 
-    GameRunner::GameRunner(const InitialState& initialState) : m_pCurrentState(nullptr)
-    {
-        m_spStates[0].reset(new State(initialState));
-        m_spStates[1].reset(
-            new State(
-                m_spStates[0]->XMin(),
-                m_spStates[0]->Width(),
-                m_spStates[0]->YMin(),
-                m_spStates[0]->Height()
-                )
-        );
+    GameRunner::GameRunner(const InitialState& initialState) : m_spState(new State(initialState))
+    {}
 
-        m_pCurrentState = m_spStates[0].get();
-    }
-
+    // TODO: Work against *subgrids*
+    /*
     bool GameRunner::Tick()
     {
         const int64_t xMin = m_pCurrentState->XMin();
@@ -107,10 +58,15 @@ namespace GameOfLife
 
         return true;
     }
+    */
+
+    bool GameRunner::Tick()
+    {
+        return m_spState->AdvanceGeneration();
+    }
 
     const State& GameRunner::CurrentState() const
     {
-        assert(m_pCurrentState == m_spStates[0].get() || m_pCurrentState == m_spStates[1].get());
-        return *m_pCurrentState;
+        return *m_spState;
     }
 }

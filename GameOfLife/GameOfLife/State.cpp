@@ -1,128 +1,60 @@
 #include "State.h"
 
 #include <limits>
+#include <cassert>
 #include <algorithm>
-
-namespace
-{
-    void ValidateDimensions(int64_t width, int64_t height)
-    {
-        if (width <= 0)
-        {
-            throw std::out_of_range("State width is not positive");
-        }
-
-        if (height <= 0)
-        {
-            throw std::out_of_range("State height is not positive");
-        }
-    }
-
-    int64_t wrap(int64_t x, int64_t min, int64_t stride)
-    {
-        x -= min;
-
-        if (x < 0)
-        {
-            x += stride;
-        }
-        else if (x > stride - 1)
-        {
-            x -= stride;
-        }
-
-        return x;
-    }
-}
 
 namespace GameOfLife
 {
-    State::State(const InitialState & initialState)
-        : m_xMin(std::numeric_limits<int64_t>::max()),
-          m_yMin(std::numeric_limits<int64_t>::max())
+    State::State(const InitialState& initialState)
     {
-        //
-        // Two passes to initialize: Determine dimensions of our buffer, then
-        // actually initialize the state.
-        //
-
+        assert(!initialState.empty());
+        int64_t xMin = std::numeric_limits<int64_t>::max();
         int64_t xMax = std::numeric_limits<int64_t>::min();
+        int64_t yMin = std::numeric_limits<int64_t>::max();
         int64_t yMax = std::numeric_limits<int64_t>::min();
-        for (const auto& cell : initialState)
-        {
-            if (cell.X < m_xMin)
-            {
-                m_xMin = cell.X;
-            }
-            else if (cell.X > xMax)
-            {
-                xMax = cell.X;
-            }
 
-            if (cell.Y < m_yMin)
+        for (const auto& state : initialState)
+        {
+            assert(state.IsAlive);
+            if (state.X < xMin) { xMin = state.X; }
+            if (state.X > xMax) { xMax = state.X; }
+            if (state.Y > yMax) { yMax = state.Y; }
+            if (state.Y > yMax) { yMax = state.Y; }
+
+            uint64_t subgridX = state.X / SUBGRID_WIDTH;
+            uint64_t subgridY = state.X / SUBGRID_HEIGHT;
+
+            auto it =
+                std::find_if(
+                    m_subgrids.begin(),
+                    m_subgrids.end(),
+                    [subgridX, subgridY](const SubGrid& subGrid)
+                    {
+                        return subGrid.XMin() == subgridX &&
+                               subGrid.YMin() == subgridY;
+                    });
+            if (it == m_subgrids.end())
             {
-                m_yMin = cell.Y;
-            }
-            else if (cell.Y > yMax)
-            {
-                yMax = cell.Y;
+                m_subgrids.emplace_back(SubGrid(subgridX, SUBGRID_WIDTH, subgridY, SUBGRID_HEIGHT));
+                m_subgrids.back().RaiseCell(state.X, state.Y);
             }
         }
 
-        m_width = xMax - m_xMin + 1;
-        m_height = yMax - m_yMin + 1;
-
-        ValidateDimensions(m_width, m_height);
-
-        m_stateBits.resize(m_height); // TODO: This can't work -- resize() takes 32-bit integer.
-        for (int64_t row = 0; row < m_height; ++row)
-        {
-            m_stateBits[row].resize(m_width, false); // TODO: ...same here
-        }
-
-        //
-        // One more pass to initialize state...
-        //
-
-        for (const auto& cell : initialState)
-        {
-            RaiseCell(cell.X, cell.Y);
-        }
+        m_xMin   = xMin;
+        m_width  = xMax - xMin + 1;
+        m_yMin   = yMin;
+        m_height = yMax - yMin + 1;
     }
 
-    State::State(int64_t xmin, int64_t width, int64_t ymin, int64_t height)
-        : m_xMin(xmin), m_width(width), m_yMin(ymin), m_height(height)
+    bool State::AdvanceGeneration()
     {
-        ValidateDimensions(m_width, m_height);
-
-        m_stateBits.resize(m_height); // TODO: Nope
-        for (int64_t row = 0; row < m_height; ++row)
-        {
-            m_stateBits[row].resize(m_width, false); // TODO: Same
-        }
+        // TODO
+        return false;
     }
 
-    void State::RaiseCell(int64_t x, int64_t y)
+    const std::vector<SubGrid>& State::GetSubgrids() const
     {
-        x = wrap(x, m_xMin, m_width);
-        y = wrap(y, m_yMin, m_height);
-
-        m_stateBits[y][x] = true; // TODO: Operator[] takes 32-bit integer
-    }
-
-    void State::KillCell(int64_t x, int64_t y)
-    {
-        x = wrap(x, m_xMin, m_width);
-        y = wrap(y, m_yMin, m_height);
-
-        m_stateBits[y][x] = false; // TODO: Operator[] takes 32-bit integer
-    }
-
-    bool State::GetCellState(int64_t x, int64_t y) const
-    {
-        x = wrap(x, m_xMin, m_width);
-        y = wrap(y, m_yMin, m_height);
-
-        return m_stateBits[y][x]; // TODO: Operator[] takes 32-bit integer
+        return m_subgrids;
     }
 }

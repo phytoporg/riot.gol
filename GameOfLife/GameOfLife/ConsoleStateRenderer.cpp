@@ -37,29 +37,41 @@ namespace GameOfLife
     //
     ConsoleStateRenderer::~ConsoleStateRenderer() = default;
 
-    void ConsoleStateRenderer::Draw(const State & state)
+    void ConsoleStateRenderer::Draw(const State& state)
     {
-        const int64_t xMin = state.XMin();
-        const int64_t yMin = state.YMin();
-
-        const int64_t Width = state.Width();
-        const int64_t Height = state.Height();
-
-        for (int64_t y = yMin; y < yMin + Height; ++y)
+        //
+        // Make a first pass and clear out the whole grid, then set cells
+        // which are alive according to the subgrid values.
+        //
+        for (int64_t y = state.YMin(); y < state.YMin() + state.Height(); y++)
         {
-            for (int64_t x = xMin; x < xMin + Width; ++x)
+            for (int64_t x = state.XMin(); x < state.XMin() + state.Width(); x++)
             {
-                int cursorX = static_cast<int>(y - yMin);
-                int cursorY = static_cast<int>(x - xMin);
-                m_spPimpl->SetCursorPosition(cursorX, cursorY);
-                
-                if (state.GetCellState(x, y))
+                m_spPimpl->WriteCharacter('-');
+            }
+        }
+
+        const auto& subgrids = state.GetSubgrids();
+        for (const auto& subgrid : subgrids)
+        {
+            const int64_t xMin = subgrid.XMin();
+            const int64_t yMin = subgrid.YMin();
+
+            const int64_t Width = subgrid.Width();
+            const int64_t Height = subgrid.Height();
+
+            for (int64_t y = yMin; y < yMin + Height; ++y)
+            {
+                for (int64_t x = xMin; x < xMin + Width; ++x)
                 {
-                    m_spPimpl->WriteCharacter('+');
-                }
-                else
-                {
-                    m_spPimpl->WriteCharacter('-');
+                    int cursorX = static_cast<int>(y - yMin);
+                    int cursorY = static_cast<int>(x - xMin);
+                    m_spPimpl->SetCursorPosition(cursorX, cursorY);
+                    
+                    if (subgrid.GetCellState(x, y))
+                    {
+                        m_spPimpl->WriteCharacter('+');
+                    }
                 }
             }
         }

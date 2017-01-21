@@ -7,9 +7,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="GameOfLife\GameRunner.cpp" />
-    <ClCompile Include="GameOfLife\State.cpp" />
-    <ClCompile Include="GameOfLife\ConsoleStateRenderer.cpp" />
+    <ClCompile Include="GameOfLife\ConsoleStateRenderer.cpp">
+      <Filter>GameOfLife</Filter>
+    </ClCompile>
+    <ClCompile Include="GameOfLife\GameRunner.cpp">
+      <Filter>GameOfLife</Filter>
+    </ClCompile>
+    <ClCompile Include="GameOfLife\State.cpp">
+      <Filter>GameOfLife</Filter>
+    </ClCompile>
+    <ClCompile Include="GameOfLife\SubGrid.cpp">
+      <Filter>GameOfLife</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameOfLife\Cell.h">
@@ -25,6 +34,12 @@
       <Filter>GameOfLife</Filter>
     </ClInclude>
     <ClInclude Include="GameOfLife\ConsoleStateRenderer.h">
+      <Filter>GameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLife\SubGrid.h">
+      <Filter>GameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLife\RectangularGrid.h">
       <Filter>GameOfLife</Filter>
     </ClInclude>
   </ItemGroup>

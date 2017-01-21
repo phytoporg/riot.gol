@@ -20,15 +20,6 @@ namespace GameOfLife
         //
         bool Tick();
 
-        // 
-        // Retrieve a reference to the current state.
-        // 
-        // TODO: Dangerous to use this reference after calling Tick(). Need
-        // to implement some kind of weakptr-like object which invalidates
-        // the state when it's no longer current.
-        //
-        // For now, just be careful on the consuming end.
-        //
         const State& CurrentState() const;
 
     private:
@@ -36,8 +27,6 @@ namespace GameOfLife
         GameRunner(const GameRunner& other) = delete;
         GameRunner& operator=(const GameRunner& other) = delete;
 
-        // TODO: Pimpl
-        std::unique_ptr<State> m_spStates[2];
-        State* m_pCurrentState;
+        std::unique_ptr<State> m_spState;
     };
 }
