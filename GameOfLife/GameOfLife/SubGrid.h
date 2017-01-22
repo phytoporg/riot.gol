@@ -15,6 +15,8 @@ namespace GameOfLife
     class SubGrid : public RectangularGrid
     {
     public:
+        typedef std::pair<int64_t, int64_t> CoordinateType;
+
         SubGrid(const InitialState& initialState);
         SubGrid(int64_t xmin, int64_t width, int64_t ymin, int64_t height);
 

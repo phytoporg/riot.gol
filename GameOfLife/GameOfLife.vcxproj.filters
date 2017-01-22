@@ -4,6 +4,9 @@
     <Filter Include="GameOfLife">
       <UniqueIdentifier>{28764784-bd26-4789-9d62-9b7476fa27c1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Utility">
+      <UniqueIdentifier>{a5d1fcfa-7f5e-4564-ac05-a52b9feee236}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -17,6 +20,9 @@
       <Filter>GameOfLife</Filter>
     </ClCompile>
     <ClCompile Include="GameOfLife\SubGrid.cpp">
+      <Filter>GameOfLife</Filter>
+    </ClCompile>
+    <ClCompile Include="GameOfLife\SubgridGraph.cpp">
       <Filter>GameOfLife</Filter>
     </ClCompile>
   </ItemGroup>
@@ -41,6 +47,12 @@
     </ClInclude>
     <ClInclude Include="GameOfLife\RectangularGrid.h">
       <Filter>GameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLife\SubgridGraph.h">
+      <Filter>GameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="Utility\Hash.h">
+      <Filter>Utility</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
