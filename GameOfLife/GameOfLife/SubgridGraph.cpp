@@ -20,9 +20,9 @@ namespace
         using GameOfLife::AdjacencyIndex;
         static const AdjacencyIndex LUT[3][3] =
         {
-            { AdjacencyIndex::TOP_LEFT,    AdjacencyIndex::TOP,    AdjacencyIndex::TOP_RIGHT      },
-            { AdjacencyIndex::LEFT,        AdjacencyIndex::MAX,    AdjacencyIndex::RIGHT          },
-            { AdjacencyIndex::BOTTOM_LEFT, AdjacencyIndex::BOTTOM, AdjacencyIndex::BOTTOM_RIGHT}
+            { AdjacencyIndex::TOP_LEFT,    AdjacencyIndex::TOP,    AdjacencyIndex::TOP_RIGHT    },
+            { AdjacencyIndex::LEFT,        AdjacencyIndex::MAX,    AdjacencyIndex::RIGHT        },
+            { AdjacencyIndex::BOTTOM_LEFT, AdjacencyIndex::BOTTOM, AdjacencyIndex::BOTTOM_RIGHT }
         };
 
         //
@@ -43,23 +43,12 @@ namespace
         )
     {
         using GameOfLife::AdjacencyIndex;
-        static const AdjacencyIndex LUT[AdjacencyIndex::MAX] =
-        {
-            AdjacencyIndex::BOTTOM_RIGHT,
-            AdjacencyIndex::BOTTOM,
-            AdjacencyIndex::BOTTOM_LEFT,
-            AdjacencyIndex::RIGHT,
-            AdjacencyIndex::LEFT,
-            AdjacencyIndex::TOP_RIGHT,
-            AdjacencyIndex::TOP,
-            AdjacencyIndex::TOP_LEFT
-        };
 
         //
         // Bounds check
         //
         assert(index > 0 && index < AdjacencyIndex::MAX);
-        return LUT[index];
+        return static_cast<AdjacencyIndex>(AdjacencyIndex::MAX - 1 - index);
     }
 
     struct LookupValue
@@ -222,7 +211,7 @@ namespace GameOfLife
     }
 
     void SubGridGraph::ProcessVertices(
-        std::function<void(SubGrid& subgrid, SubGridGraph& graph)> f
+        std::function<void(SubGrid& subgrid, SubGridGraph& graph)>& f
         )
     {
         for (auto p : m_spPimpl->VertexLookup)

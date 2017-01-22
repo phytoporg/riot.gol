@@ -43,7 +43,7 @@ namespace GameOfLife
         // Executes f(s, *this) for each subgrid s in the container.
         //
         void ProcessVertices(
-            std::function<void(SubGrid& subgrid, SubGridGraph& graph)> f
+            std::function<void(SubGrid& subgrid, SubGridGraph& graph)>& f
             );
 
     private:

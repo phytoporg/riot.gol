@@ -3,6 +3,8 @@
 #include <limits>
 #include <algorithm>
 
+#include <cassert>
+
 namespace
 {
     void ValidateDimensions(int64_t width, int64_t height)
@@ -16,22 +18,6 @@ namespace
         {
             throw std::out_of_range("SubGrid height is not positive");
         }
-    }
-
-    int64_t wrap(int64_t x, int64_t min, int64_t stride)
-    {
-        x -= min;
-
-        if (x < 0)
-        {
-            x += stride;
-        }
-        else if (x > stride - 1)
-        {
-            x -= stride;
-        }
-
-        return x;
     }
 
     template<typename T>
@@ -69,11 +55,27 @@ namespace
 
         return neighbors;
     }
+
+    std::shared_ptr<uint8_t> CreateCellGrid(size_t width, size_t height)
+    {
+        //
+        // +2 to each dimension to allow for ghost rows/columns.
+        //
+        // TODO: ensure that this is aligned to cache-line boundaries.
+        //
+        const size_t GridLength = (width + 2) * (height + 2);
+        auto spGrid = std::shared_ptr<uint8_t>(new uint8_t[GridLength], std::default_delete<uint8_t[]>());
+
+        memset(spGrid.get(), 0, GridLength);
+
+        return spGrid;
+    }
 }
 
 namespace GameOfLife
 {
-    SubGrid::SubGrid(const InitialState & initialState)
+    SubGrid::SubGrid(const InitialState & initialState) 
+        : m_generation(0)
     {
         m_xMin = std::numeric_limits<int64_t>::max();
         m_yMin = std::numeric_limits<int64_t>::max();
@@ -111,16 +113,8 @@ namespace GameOfLife
 
         ValidateDimensions(m_width, m_height);
 
-        m_spCellGrid[0] = std::make_shared<CellGrid>();
-        m_spCellGrid[1] = std::make_shared<CellGrid>();
-
-        m_spCellGrid[0]->resize(m_height); // TODO: This can't work -- resize() takes 32-bit integer.
-        m_spCellGrid[1]->resize(m_height); // TODO: This can't work -- resize() takes 32-bit integer.
-        for (int64_t row = 0; row < m_height; ++row)
-        {
-            (*m_spCellGrid[0])[row].resize(m_width, false); // TODO: ...same here
-            (*m_spCellGrid[1])[row].resize(m_width, false); // TODO: ...same here
-        }
+        m_spCellGrid[0] = CreateCellGrid(m_width, m_height);
+        m_spCellGrid[1] = CreateCellGrid(m_width, m_height);
         m_pCurrentCellGrid = m_spCellGrid[0].get();
 
         //
@@ -134,20 +128,16 @@ namespace GameOfLife
     }
 
     SubGrid::SubGrid(int64_t xmin, int64_t width, int64_t ymin, int64_t height)
-        : RectangularGrid(xmin, width, ymin, height)
+        : RectangularGrid(xmin, width, ymin, height),
+          m_generation(0)
     {
         ValidateDimensions(m_width, m_height);
 
-        m_spCellGrid[0] = std::make_shared<CellGrid>();
-        m_spCellGrid[1] = std::make_shared<CellGrid>();
+        m_spCellGrid[0] = std::make_shared<uint8_t>();
+        m_spCellGrid[1] = std::make_shared<uint8_t>();
 
-        m_spCellGrid[0]->resize(m_height); // TODO: Nope
-        m_spCellGrid[1]->resize(m_height); // TODO: Nope
-        for (int64_t row = 0; row < m_height; ++row)
-        {
-            (*m_spCellGrid[0])[row].resize(m_width, false); // TODO: Same
-            (*m_spCellGrid[1])[row].resize(m_width, false); // TODO: Same
-        }
+        m_spCellGrid[0] = CreateCellGrid(m_width, m_height);
+        m_spCellGrid[1] = CreateCellGrid(m_width, m_height);
         m_pCurrentCellGrid = m_spCellGrid[0].get();
     }
 
@@ -159,12 +149,20 @@ namespace GameOfLife
         m_spCellGrid[1] = other.m_spCellGrid[1];
     }
 
-    void SubGrid::RaiseCell(CellGrid* pGrid, int64_t x, int64_t y)
+    size_t SubGrid::GetOffset(int64_t x, int64_t y) const
     {
-        x = wrap(x, m_xMin, m_width);
-        y = wrap(y, m_yMin, m_height);
+        x = x - m_xMin + 1;
+        y = y - m_yMin + 1;
 
-        (*pGrid)[y][x] = true; // TODO: Operator[] takes 32-bit integer
+        assert(x >= 0 && y >= 0);
+        assert(x < m_width + 2 && y < m_height + 2);
+
+        return static_cast<size_t>(x + (m_width + 2) * y);
+    }
+
+    void SubGrid::RaiseCell(uint8_t* pGrid, int64_t x, int64_t y)
+    {
+        pGrid[GetOffset(x, y)] = true;
     }
 
     void SubGrid::RaiseCell(int64_t x, int64_t y)
@@ -172,12 +170,9 @@ namespace GameOfLife
         RaiseCell(m_pCurrentCellGrid, x, y);
     }
 
-    void SubGrid::KillCell(CellGrid* pGrid, int64_t x, int64_t y)
+    void SubGrid::KillCell(uint8_t* pGrid, int64_t x, int64_t y)
     {
-        x = wrap(x, m_xMin, m_width);
-        y = wrap(y, m_yMin, m_height);
-
-        (*pGrid)[y][x] = false; // TODO: Operator[] takes 32-bit integer
+        pGrid[GetOffset(x, y)] = false;
     }
 
     void SubGrid::KillCell(int64_t x, int64_t y)
@@ -185,12 +180,9 @@ namespace GameOfLife
         KillCell(m_pCurrentCellGrid, x, y);
     }
 
-    bool SubGrid::GetCellState(CellGrid const* pGrid, int64_t x, int64_t y) const
+    bool SubGrid::GetCellState(uint8_t const* pGrid, int64_t x, int64_t y) const
     {
-        x = wrap(x, m_xMin, m_width);
-        y = wrap(y, m_yMin, m_height);
-
-        return (*pGrid)[y][x]; // TODO: Operator[] takes 32-bit integer
+        return !!pGrid[GetOffset(x, y)];
     }
 
     bool SubGrid::GetCellState(int64_t x, int64_t y) const
@@ -200,7 +192,44 @@ namespace GameOfLife
 
     void SubGrid::AdvanceGeneration()
     {
-        // TODO: Use ghost buffers instead of wrapping around.
+        //
+        // Copy ghost rows
+        //
+        {
+            int64_t srcY = m_yMin;
+            int64_t dstY = m_yMin + m_height;
+            for (int64_t x = m_xMin; x < m_xMin + m_width; x++)
+            {
+                m_pCurrentCellGrid[GetOffset(x, dstY)] = m_pCurrentCellGrid[GetOffset(x, srcY)];
+            }
+
+            srcY = m_yMin + m_height - 1;
+            dstY = m_yMin - 1;
+            for (int64_t x = m_xMin; x < m_xMin + m_width; x++)
+            {
+                m_pCurrentCellGrid[GetOffset(x, dstY)] = m_pCurrentCellGrid[GetOffset(x, srcY)];
+            }
+        }
+
+        //
+        // Copy ghost columns
+        //
+        {
+            int64_t srcX = m_xMin;
+            int64_t dstX = m_xMin + m_width;
+            for (int64_t y = m_yMin; y < m_yMin + m_height; y++)
+            {
+                m_pCurrentCellGrid[GetOffset(dstX, y)] = m_pCurrentCellGrid[GetOffset(srcX, y)];
+            }
+
+            srcX = m_xMin + m_width - 1;
+            dstX = m_xMin - 1;
+            for (int64_t y = m_yMin; y < m_yMin + m_height; y++)
+            {
+                m_pCurrentCellGrid[GetOffset(dstX, y)] = m_pCurrentCellGrid[GetOffset(srcX, y)];
+            }
+        }
+
         decltype(m_pCurrentCellGrid) pOtherGrid =
             OtherPointer(m_pCurrentCellGrid, m_spCellGrid[0].get(), m_spCellGrid[1].get());
 
@@ -234,6 +263,7 @@ namespace GameOfLife
             }
         }
 
+        ++m_generation;
         m_pCurrentCellGrid = pOtherGrid;
     }
 }

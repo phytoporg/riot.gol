@@ -22,6 +22,9 @@ namespace GameOfLife
 
         SubGrid(const SubGrid& other);
 
+        //
+        // For STL containers.
+        //
         SubGrid& operator=(const SubGrid& other) = default;
 
         //
@@ -33,18 +36,22 @@ namespace GameOfLife
         bool GetCellState(int64_t x, int64_t y) const;
          
         void AdvanceGeneration();
+        uint64_t GetGeneration() const { return m_generation; }
 
     private:
-        typedef std::vector<std::vector<bool>> CellGrid;
-
         //
-        // Make copies cheap.
+        // Make copies cheap by putting everything on the heap; just track
+        // pointers.
         //
-        std::shared_ptr<CellGrid> m_spCellGrid[2];
-        CellGrid* m_pCurrentCellGrid;
+        std::shared_ptr<uint8_t> m_spCellGrid[2];
+        uint8_t* m_pCurrentCellGrid;
 
-        bool GetCellState(CellGrid const* pGrid, int64_t x, int64_t y) const;
-        void RaiseCell(CellGrid* pGrid, int64_t x, int64_t y);
-        void KillCell(CellGrid* pGrid, int64_t x, int64_t y);
+        bool GetCellState(uint8_t const* pGrid, int64_t x, int64_t y) const;
+        void RaiseCell(uint8_t* pGrid, int64_t x, int64_t y);
+        void KillCell(uint8_t* pGrid, int64_t x, int64_t y);
+
+        size_t GetOffset(int64_t x, int64_t y) const;
+
+        uint64_t m_generation;
     };
 }
