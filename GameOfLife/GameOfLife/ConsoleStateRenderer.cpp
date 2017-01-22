@@ -2,6 +2,8 @@
 
 #include <windows.h>
 
+#include <iostream>
+
 namespace GameOfLife
 {
     class ConsoleStateRenderer::Pimpl
@@ -51,8 +53,8 @@ namespace GameOfLife
             {
                 for (int64_t x = xMin; x < xMin + state.Width(); x++)
                 {
-                    int cursorX = static_cast<int>(y - yMin);
-                    int cursorY = static_cast<int>(x - xMin);
+                    int cursorX = static_cast<int>(x - xMin);
+                    int cursorY = static_cast<int>(y - yMin);
                     m_spPimpl->SetCursorPosition(cursorX, cursorY);
                     m_spPimpl->WriteCharacter('-');
                 }
@@ -71,13 +73,15 @@ namespace GameOfLife
                 {
                     if (subgrid.GetCellState(x, y))
                     {
-                        int cursorX = static_cast<int>(y - yMin);
-                        int cursorY = static_cast<int>(x - xMin);
+                        int cursorX = static_cast<int>(x - state.XMin());
+                        int cursorY = static_cast<int>(y - state.YMin());
                         m_spPimpl->SetCursorPosition(cursorX, cursorY);
                         m_spPimpl->WriteCharacter('+');
                     }
                 }
             }
         }
+
+        m_spPimpl->SetCursorPosition(state.Width() - 1, state.Height() - 1);
     }
 }

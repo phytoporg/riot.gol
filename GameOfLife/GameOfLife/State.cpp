@@ -34,6 +34,9 @@ namespace GameOfLife
 
         for (const auto& state : initialState)
         {
+            //
+            // TODO: This is stupid and hideous but it's 1am so fix later.
+            //
             const int64_t SubgridX = (state.X - m_xMin) / SUBGRID_WIDTH;
             const int64_t SubgridY = (state.Y - m_yMin) / SUBGRID_HEIGHT;
 

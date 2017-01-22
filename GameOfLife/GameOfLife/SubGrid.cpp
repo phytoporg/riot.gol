@@ -111,14 +111,17 @@ namespace GameOfLife
 
         ValidateDimensions(m_width, m_height);
 
-        m_cellGrid[0].resize(m_height); // TODO: This can't work -- resize() takes 32-bit integer.
-        m_cellGrid[1].resize(m_height); // TODO: This can't work -- resize() takes 32-bit integer.
+        m_spCellGrid[0] = std::make_shared<CellGrid>();
+        m_spCellGrid[1] = std::make_shared<CellGrid>();
+
+        m_spCellGrid[0]->resize(m_height); // TODO: This can't work -- resize() takes 32-bit integer.
+        m_spCellGrid[1]->resize(m_height); // TODO: This can't work -- resize() takes 32-bit integer.
         for (int64_t row = 0; row < m_height; ++row)
         {
-            m_cellGrid[0][row].resize(m_width, false); // TODO: ...same here
-            m_cellGrid[1][row].resize(m_width, false); // TODO: ...same here
+            (*m_spCellGrid[0])[row].resize(m_width, false); // TODO: ...same here
+            (*m_spCellGrid[1])[row].resize(m_width, false); // TODO: ...same here
         }
-        m_pCurrentCellGrid = &m_cellGrid[0];
+        m_pCurrentCellGrid = m_spCellGrid[0].get();
 
         //
         // One more pass to initialize state...
@@ -135,14 +138,25 @@ namespace GameOfLife
     {
         ValidateDimensions(m_width, m_height);
 
-        m_cellGrid[0].resize(m_height); // TODO: Nope
-        m_cellGrid[1].resize(m_height); // TODO: Nope
+        m_spCellGrid[0] = std::make_shared<CellGrid>();
+        m_spCellGrid[1] = std::make_shared<CellGrid>();
+
+        m_spCellGrid[0]->resize(m_height); // TODO: Nope
+        m_spCellGrid[1]->resize(m_height); // TODO: Nope
         for (int64_t row = 0; row < m_height; ++row)
         {
-            m_cellGrid[0][row].resize(m_width, false); // TODO: Same
-            m_cellGrid[1][row].resize(m_width, false); // TODO: Same
+            (*m_spCellGrid[0])[row].resize(m_width, false); // TODO: Same
+            (*m_spCellGrid[1])[row].resize(m_width, false); // TODO: Same
         }
-        m_pCurrentCellGrid = &m_cellGrid[0];
+        m_pCurrentCellGrid = m_spCellGrid[0].get();
+    }
+
+    SubGrid::SubGrid(const SubGrid& other)
+        : RectangularGrid(other.m_xMin, other.m_width, other.m_yMin, other.m_height),
+          m_pCurrentCellGrid(other.m_pCurrentCellGrid)
+    {
+        m_spCellGrid[0] = other.m_spCellGrid[0];
+        m_spCellGrid[1] = other.m_spCellGrid[1];
     }
 
     void SubGrid::RaiseCell(CellGrid* pGrid, int64_t x, int64_t y)
@@ -188,7 +202,7 @@ namespace GameOfLife
     {
         // TODO: Use ghost buffers instead of wrapping around.
         decltype(m_pCurrentCellGrid) pOtherGrid =
-            OtherPointer(m_pCurrentCellGrid, &m_cellGrid[0], &m_cellGrid[1]);
+            OtherPointer(m_pCurrentCellGrid, m_spCellGrid[0].get(), m_spCellGrid[1].get());
 
         for (int64_t y = m_yMin; y < m_yMin + m_height; y++)
         {

@@ -8,6 +8,8 @@
 #include "InitialState.h"
 #include "RectangularGrid.h"
 
+#include <memory>
+
 namespace GameOfLife
 {
     class SubGrid : public RectangularGrid
@@ -16,7 +18,8 @@ namespace GameOfLife
         SubGrid(const InitialState& initialState);
         SubGrid(int64_t xmin, int64_t width, int64_t ymin, int64_t height);
 
-        SubGrid(const SubGrid& other) = default;
+        SubGrid(const SubGrid& other);
+
         SubGrid& operator=(const SubGrid& other) = default;
 
         //
@@ -31,7 +34,11 @@ namespace GameOfLife
 
     private:
         typedef std::vector<std::vector<bool>> CellGrid;
-        CellGrid m_cellGrid[2];
+
+        //
+        // Make copies cheap.
+        //
+        std::shared_ptr<CellGrid> m_spCellGrid[2];
         CellGrid* m_pCurrentCellGrid;
 
         bool GetCellState(CellGrid const* pGrid, int64_t x, int64_t y) const;
