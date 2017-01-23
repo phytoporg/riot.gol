@@ -33,10 +33,20 @@ namespace GameOfLife
         SubGridGraph();
         ~SubGridGraph();
 
+        bool GetNeighborArray(const SubGrid& subgrid, SubGrid**& ppNeighbors) const;
+
         bool AddVertex(const SubGrid& subgrid);
         bool RemoveVertex(const SubGrid& subgrid);
+        bool QueryVertex(
+            const SubGrid::CoordinateType& coord,
+            SubGrid** ppSubGrid
+            ) const;
 
         bool AddEdge(const SubGrid& subgrid1, const SubGrid& subgrid2);
+        bool AddEdge(
+            const SubGrid::CoordinateType& coord1,
+            const SubGrid::CoordinateType& coord2
+            );
         bool RemoveEdge(const SubGrid& subgrid1, const SubGrid& subgrid2);
 
         //

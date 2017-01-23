@@ -1,4 +1,5 @@
 #include "SubGridGraph.h"
+#include "State.h"
 
 #include <Utility/Hash.h>
 
@@ -6,13 +7,6 @@
 
 namespace
 {
-    GameOfLife::SubGrid::CoordinateType GetSubridCoordinates(
-        const GameOfLife::SubGrid& subgrid
-        )
-    {
-        return std::make_pair(subgrid.XMin(), subgrid.YMin());
-    }
-
     GameOfLife::AdjacencyIndex GetIndexFromNeighborPosition(
         const GameOfLife::SubGrid::CoordinateType& coord
         )
@@ -33,9 +27,9 @@ namespace
         //
         // Bounds check
         //
-        assert(coord.first < 3 && coord.second < 3);
-        assert(coord.first > 0 && coord.second > 0);
-        return LUT[coord.first + 1][coord.second + 1];
+        assert(coord.first <= 1 && coord.second <= 1);
+        assert(coord.first >= -1 && coord.second >= -1);
+        return LUT[coord.second + 1][coord.first + 1];
     }
 
     GameOfLife::AdjacencyIndex GetReflectedAdjacencyIndex(
@@ -47,7 +41,7 @@ namespace
         //
         // Bounds check
         //
-        assert(index > 0 && index < AdjacencyIndex::MAX);
+        assert(index >= 0 && index < AdjacencyIndex::MAX);
         return static_cast<AdjacencyIndex>(AdjacencyIndex::MAX - 1 - index);
     }
 
@@ -87,9 +81,26 @@ namespace GameOfLife
     //
     SubGridGraph::~SubGridGraph() = default;
 
+    bool SubGridGraph::GetNeighborArray(
+        const SubGrid& subgrid,
+        /* out */SubGrid**& ppNeighbors
+        ) const
+    {
+        assert(ppNeighbors);
+
+        auto it = m_spPimpl->VertexLookup.find(subgrid.GetCoordinates());
+        if (it == m_spPimpl->VertexLookup.end())
+        {
+            return false;
+        }
+
+        ppNeighbors = it->second.Neighbors;
+        return true;
+    }
+
     bool SubGridGraph::AddVertex(const SubGrid& subgrid)
     {
-        const auto Coords = GetSubridCoordinates(subgrid);
+        const auto Coords = subgrid.GetCoordinates();
         
         auto it = m_spPimpl->VertexLookup.find(Coords);
         if (it != m_spPimpl->VertexLookup.end()) { return false; }
@@ -105,7 +116,7 @@ namespace GameOfLife
 
     bool SubGridGraph::RemoveVertex(const SubGrid& subgrid)
     {
-        const auto Coords = GetSubridCoordinates(subgrid);
+        const auto Coords = subgrid.GetCoordinates();
 
         auto it = m_spPimpl->VertexLookup.find(Coords);
         if (it == m_spPimpl->VertexLookup.end()) { return false; }
@@ -121,7 +132,7 @@ namespace GameOfLife
                 const AdjacencyIndex Reflectedindex =
                     GetReflectedAdjacencyIndex(static_cast<AdjacencyIndex>(i));
                 
-                const auto& NeighborCoords = GetSubridCoordinates(*pNeighbor);
+                const auto& NeighborCoords = pNeighbor->GetCoordinates();
                 auto& pNeighborNeighbor = m_spPimpl->VertexLookup[NeighborCoords].Neighbors[Reflectedindex];
 
                 //
@@ -139,20 +150,47 @@ namespace GameOfLife
         return true;
     }
 
+    bool SubGridGraph::QueryVertex(
+        const SubGrid::CoordinateType& coord,
+        SubGrid** ppSubGrid = nullptr
+        ) const 
+    {
+        auto it = m_spPimpl->VertexLookup.find(coord); 
+        if (it == m_spPimpl->VertexLookup.end())
+        {
+            return false;
+        }
+
+        if (ppSubGrid)
+        {
+            *ppSubGrid = it->second.pSubGrid;
+        }
+
+        return true;
+    }
+
     bool SubGridGraph::AddEdge(const SubGrid& subgrid1, const SubGrid& subgrid2)
     {
-        const auto Coordinates1 = GetSubridCoordinates(subgrid1);
-        const auto Coordinates2 = GetSubridCoordinates(subgrid2);
+        const auto Coordinates1 = subgrid1.GetCoordinates();
+        const auto Coordinates2 = subgrid2.GetCoordinates();
 
-        auto it1 = m_spPimpl->VertexLookup.find(Coordinates1);
+        return AddEdge(Coordinates1, Coordinates2);
+    }
+
+    bool SubGridGraph::AddEdge(
+        const SubGrid::CoordinateType& coord1,
+        const SubGrid::CoordinateType& coord2
+        )
+    {
+        auto it1 = m_spPimpl->VertexLookup.find(coord1);
         if (it1 == m_spPimpl->VertexLookup.end()) { return false; }
 
-        auto it2 = m_spPimpl->VertexLookup.find(Coordinates2);
+        auto it2 = m_spPimpl->VertexLookup.find(coord2);
         if (it2 == m_spPimpl->VertexLookup.end()) { return false; }
 
         const auto OneToTwo = std::make_pair(
-            Coordinates2.first - Coordinates1.first,
-            Coordinates2.second - Coordinates1.second
+            (coord2.first  - coord1.first)  / State::SUBGRID_WIDTH,
+            (coord2.second - coord1.second) / State::SUBGRID_HEIGHT
             );
         const AdjacencyIndex OneToTwoIndex = GetIndexFromNeighborPosition(OneToTwo);
         const AdjacencyIndex TwoToOneIndex = GetReflectedAdjacencyIndex(OneToTwoIndex);
@@ -165,8 +203,8 @@ namespace GameOfLife
 
     bool SubGridGraph::RemoveEdge(const SubGrid& subgrid1, const SubGrid& subgrid2)
     {
-        const auto Coordinates1 = GetSubridCoordinates(subgrid1);
-        const auto Coordinates2 = GetSubridCoordinates(subgrid2);
+        const auto Coordinates1 = subgrid1.GetCoordinates();
+        const auto Coordinates2 = subgrid2.GetCoordinates();
 
         return RemoveEdge(Coordinates1, Coordinates2);
     }

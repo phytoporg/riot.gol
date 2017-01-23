@@ -32,6 +32,9 @@ namespace GameOfLife
         m_yMin   = yMin;
         m_height = yMax - yMin + 1;
 
+        // TEMP
+        m_subgrids.reserve(100);
+
         for (const auto& state : initialState)
         {
             //
@@ -43,29 +46,52 @@ namespace GameOfLife
             const int64_t SubgridMinX = m_xMin + SubgridX * SUBGRID_WIDTH;
             const int64_t SubgridMinY = m_yMin + SubgridY * SUBGRID_HEIGHT;
 
-            auto it =
-                std::find_if(
-                    m_subgrids.begin(),
-                    m_subgrids.end(),
-                    [SubgridMinX, SubgridMinY](const SubGrid& subGrid)
-                    {
-                        return subGrid.XMin() == SubgridMinX &&
-                               subGrid.YMin() == SubgridMinY;
-                    });
-            if (it == m_subgrids.end())
+            SubGrid* pSubGrid = nullptr;
+            if (!m_gridGraph.QueryVertex(std::make_pair(SubgridMinX, SubgridMinY), &pSubGrid))
             {
                 m_subgrids.emplace_back(
+                    m_gridGraph,
                     SubgridMinX, std::min(SUBGRID_WIDTH,  xMax - SubgridMinX + 1), 
                     SubgridMinY, std::min(SUBGRID_HEIGHT, yMax - SubgridMinY + 1)
                     );
-                m_subgrids.back().RaiseCell(state.X, state.Y);
+
+                auto& subGrid = m_subgrids.back();
+                subGrid.RaiseCell(state.X, state.Y);
+                m_gridGraph.AddVertex(subGrid);
             }
             else
             {
-                it->RaiseCell(state.X, state.Y);
+                pSubGrid->RaiseCell(state.X, state.Y);
             }
         }
 
+        //
+        // Populate adjacency info. TODO: Only assign adjacency to neighbors whose
+        // cells will impact one another.
+        //
+        for (auto& subgrid : m_subgrids)
+        {
+            const auto SubgridCoordinates = std::make_pair(subgrid.XMin(), subgrid.YMin());
+            for (int64_t dy = -1; dy < 2; ++dy)
+            {
+                for (int64_t dx = -1; dx < 2; ++dx)
+                {
+                    if (dx || dy)
+                    {
+                        const auto NeighborCoordinates =
+                            std::make_pair(
+                                SubgridCoordinates.first + dx * SUBGRID_WIDTH,
+                                SubgridCoordinates.second + dy * SUBGRID_HEIGHT
+                                );
+                        SubGrid* pNeighbor;
+                        if (m_gridGraph.QueryVertex(NeighborCoordinates, &pNeighbor))
+                        {
+                            m_gridGraph.AddEdge(SubgridCoordinates, NeighborCoordinates);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     bool State::AdvanceGeneration()

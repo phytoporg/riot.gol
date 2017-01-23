@@ -12,13 +12,15 @@
 
 namespace GameOfLife
 {
+    class SubGridGraph;
+
     class SubGrid : public RectangularGrid
     {
     public:
         typedef std::pair<int64_t, int64_t> CoordinateType;
 
-        SubGrid(const InitialState& initialState);
-        SubGrid(int64_t xmin, int64_t width, int64_t ymin, int64_t height);
+        SubGrid(SubGridGraph& graph, const InitialState& initialState);
+        SubGrid(SubGridGraph& graph, int64_t xmin, int64_t width, int64_t ymin, int64_t height);
 
         SubGrid(const SubGrid& other);
 
@@ -28,12 +30,14 @@ namespace GameOfLife
         SubGrid& operator=(const SubGrid& other) = default;
 
         //
-        // (x, y) coordinates are toroidal
+        // (x, y) coordinates are somewhat toroidal due to ghost buffers.
         //
         void RaiseCell(int64_t x, int64_t y);
         void KillCell(int64_t x, int64_t y);
 
         bool GetCellState(int64_t x, int64_t y) const;
+
+        const CoordinateType& GetCoordinates() const;
          
         void AdvanceGeneration();
         uint64_t GetGeneration() const { return m_generation; }
@@ -50,8 +54,13 @@ namespace GameOfLife
         void RaiseCell(uint8_t* pGrid, int64_t x, int64_t y);
         void KillCell(uint8_t* pGrid, int64_t x, int64_t y);
 
+        void CopyRowFrom(const SubGrid& other, uint8_t const* pOtherBuffer, int64_t ySrc, int64_t yDst);
+        void CopyColumnFrom(const SubGrid& other, uint8_t const* pOtherBuffer, int64_t xSrc, int64_t xDst);
+
         size_t GetOffset(int64_t x, int64_t y) const;
 
-        uint64_t m_generation;
+        CoordinateType m_coordinates;
+        uint64_t      m_generation;
+        SubGridGraph& m_gridGraph;
     };
 }

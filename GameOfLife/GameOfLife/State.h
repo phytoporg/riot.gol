@@ -8,6 +8,7 @@
 #include "SubGrid.h"
 #include "Cell.h"
 #include "RectangularGrid.h"
+#include "SubgridGraph.h"
 
 #include <vector>
 
@@ -29,6 +30,16 @@ namespace GameOfLife
         State(const State& other) = delete;
         State& operator=(const State& other) = delete;
 
+        //
+        // Subgrid storage. TODO: Don't use a vector. Will have to incur a linear
+        // lookup and "shuffle" cost for deletion. Fine for now, but not great at
+        // scale.
+        //
         std::vector<SubGrid> m_subgrids;
+
+        //
+        // Subgrid adjacency info
+        //
+        SubGridGraph m_gridGraph;
     };
 }

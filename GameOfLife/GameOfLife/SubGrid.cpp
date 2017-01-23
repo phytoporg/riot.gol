@@ -1,4 +1,5 @@
 #include "SubGrid.h"
+#include "SubgridGraph.h"
 
 #include <limits>
 #include <algorithm>
@@ -74,8 +75,8 @@ namespace
 
 namespace GameOfLife
 {
-    SubGrid::SubGrid(const InitialState & initialState) 
-        : m_generation(0)
+    SubGrid::SubGrid(SubGridGraph& graph, const InitialState & initialState) 
+        : m_generation(0), m_gridGraph(graph)
     {
         m_xMin = std::numeric_limits<int64_t>::max();
         m_yMin = std::numeric_limits<int64_t>::max();
@@ -125,11 +126,14 @@ namespace GameOfLife
         {
             RaiseCell(cell.X, cell.Y);
         }
+
+        m_coordinates = std::make_pair(m_xMin, m_yMin);
     }
 
-    SubGrid::SubGrid(int64_t xmin, int64_t width, int64_t ymin, int64_t height)
+    SubGrid::SubGrid(SubGridGraph& graph, int64_t xmin, int64_t width, int64_t ymin, int64_t height)
         : RectangularGrid(xmin, width, ymin, height),
-          m_generation(0)
+          m_generation(0),
+          m_gridGraph(graph)
     {
         ValidateDimensions(m_width, m_height);
 
@@ -139,11 +143,15 @@ namespace GameOfLife
         m_spCellGrid[0] = CreateCellGrid(m_width, m_height);
         m_spCellGrid[1] = CreateCellGrid(m_width, m_height);
         m_pCurrentCellGrid = m_spCellGrid[0].get();
+
+        m_coordinates = std::make_pair(m_xMin, m_yMin);
     }
 
     SubGrid::SubGrid(const SubGrid& other)
         : RectangularGrid(other.m_xMin, other.m_width, other.m_yMin, other.m_height),
-          m_pCurrentCellGrid(other.m_pCurrentCellGrid)
+          m_pCurrentCellGrid(other.m_pCurrentCellGrid),
+          m_gridGraph(other.m_gridGraph),
+          m_coordinates(other.m_coordinates)
     {
         m_spCellGrid[0] = other.m_spCellGrid[0];
         m_spCellGrid[1] = other.m_spCellGrid[1];
@@ -190,43 +198,144 @@ namespace GameOfLife
         return GetCellState(m_pCurrentCellGrid, x, y);
     }
 
+    const SubGrid::CoordinateType& SubGrid::GetCoordinates() const
+    {
+        return m_coordinates;
+    }
+
+    void SubGrid::CopyRowFrom(
+        const SubGrid& other,
+        uint8_t const* pGrid,
+        int64_t ySrc,
+        int64_t yDst
+        )
+    {
+        assert(m_width == other.m_width);
+        const uint8_t* const pSrc = &pGrid[other.GetOffset(other.m_xMin, ySrc)];
+              uint8_t* const pDst = &m_pCurrentCellGrid[GetOffset(m_xMin, yDst)];
+
+        memcpy(pDst, pSrc, m_width);
+    }
+
+    void SubGrid::CopyColumnFrom(
+        const SubGrid& other,
+        uint8_t const* pGrid,
+        int64_t xSrc,
+        int64_t xDst
+        )
+    {
+        assert(m_height == other.m_height);
+        const uint8_t* pSrc = &pGrid[other.GetOffset(xSrc, m_yMin)];
+              uint8_t* pDst = &m_pCurrentCellGrid[GetOffset(xDst, other.m_yMin)];
+
+        for (int64_t i = 0; i < m_height; i++)
+        {
+            *pDst = *pSrc;
+            pDst += (m_width + 2);
+            pSrc += (m_width + 2);
+        }
+    }
+
     void SubGrid::AdvanceGeneration()
     {
         //
-        // Copy ghost rows
+        // Copy neighbor border data if it exists.
         //
+        SubGrid** ppNeighbors;
+        if (!m_gridGraph.GetNeighborArray(*this, ppNeighbors))
         {
-            int64_t srcY = m_yMin;
-            int64_t dstY = m_yMin + m_height;
-            for (int64_t x = m_xMin; x < m_xMin + m_width; x++)
-            {
-                m_pCurrentCellGrid[GetOffset(x, dstY)] = m_pCurrentCellGrid[GetOffset(x, srcY)];
-            }
-
-            srcY = m_yMin + m_height - 1;
-            dstY = m_yMin - 1;
-            for (int64_t x = m_xMin; x < m_xMin + m_width; x++)
-            {
-                m_pCurrentCellGrid[GetOffset(x, dstY)] = m_pCurrentCellGrid[GetOffset(x, srcY)];
-            }
+            assert(false);
+            throw "Subgrid exists but isn't in the grid graph!";
         }
 
-        //
-        // Copy ghost columns
-        //
+        for (int i = 0; i < AdjacencyIndex::MAX; ++i)
         {
-            int64_t srcX = m_xMin;
-            int64_t dstX = m_xMin + m_width;
-            for (int64_t y = m_yMin; y < m_yMin + m_height; y++)
+            SubGrid* pNeighbor = ppNeighbors[i];
+            if (!pNeighbor)
             {
-                m_pCurrentCellGrid[GetOffset(dstX, y)] = m_pCurrentCellGrid[GetOffset(srcX, y)];
+                continue;
             }
 
-            srcX = m_xMin + m_width - 1;
-            dstX = m_xMin - 1;
-            for (int64_t y = m_yMin; y < m_yMin + m_height; y++)
+            uint8_t* pNeighborGrid = pNeighbor->m_pCurrentCellGrid;
+            if (pNeighbor->m_generation > m_generation)
             {
-                m_pCurrentCellGrid[GetOffset(dstX, y)] = m_pCurrentCellGrid[GetOffset(srcX, y)];
+                pNeighborGrid =
+                    OtherPointer(
+                        pNeighborGrid,
+                        pNeighbor->m_spCellGrid[0].get(),
+                        pNeighbor->m_spCellGrid[1].get()
+                        );
+            }
+
+            switch (i)
+            {
+            case AdjacencyIndex::TOP_LEFT:
+                m_pCurrentCellGrid[GetOffset(m_xMin - 1, m_yMin - 1)] = 
+                    pNeighbor->GetCellState(
+                        pNeighborGrid,
+                        pNeighbor->XMin() + pNeighbor->Width()  - 1,
+                        pNeighbor->YMin() + pNeighbor->Height() - 1
+                        );
+                break;
+            case AdjacencyIndex::TOP:
+                //
+                // TODO: Version of this function which takes the other grid pointer. We've
+                // already determined it, no need to do it twice.
+                //
+                CopyRowFrom(
+                    *pNeighbor, pNeighborGrid,
+                    pNeighbor->YMin() + pNeighbor->Width() - 1,
+                    m_yMin - 1
+                    );
+                break;
+            case AdjacencyIndex::TOP_RIGHT:
+                m_pCurrentCellGrid[GetOffset(m_xMin + m_width, m_yMin - 1)] = 
+                    pNeighbor->GetCellState(
+                        pNeighborGrid,
+                        pNeighbor->XMin(),
+                        pNeighbor->YMin() + pNeighbor->Height() - 1
+                        );
+                break;
+            case AdjacencyIndex::LEFT:
+                CopyColumnFrom(
+                    *pNeighbor, pNeighborGrid,
+                    pNeighbor->XMin() + pNeighbor->Width() - 1,
+                    m_xMin - 1
+                    );
+                break;
+            case AdjacencyIndex::RIGHT:
+                CopyColumnFrom(
+                    *pNeighbor, pNeighborGrid,
+                    pNeighbor->XMin(),
+                    m_xMin + m_width
+                    );
+                break;
+            case AdjacencyIndex::BOTTOM_LEFT:
+                m_pCurrentCellGrid[GetOffset(m_xMin - 1, m_yMin + m_height)] = 
+                    pNeighbor->GetCellState(
+                        pNeighborGrid,
+                        pNeighbor->XMin() + pNeighbor->Width() - 1,
+                        pNeighbor->YMin()
+                        );
+                break;
+            case AdjacencyIndex::BOTTOM:
+                CopyRowFrom(
+                    *pNeighbor, pNeighborGrid,
+                    pNeighbor->YMin(),
+                    m_yMin - 1
+                    );
+                break;
+            case AdjacencyIndex::BOTTOM_RIGHT:
+                m_pCurrentCellGrid[GetOffset(m_xMin + m_width, m_yMin + m_height)] = 
+                    pNeighbor->GetCellState(
+                        pNeighborGrid,
+                        pNeighbor->XMin() + pNeighbor->Width()  - 1,
+                        pNeighbor->YMin() + pNeighbor->Height() - 1
+                        );
+                break;
+            default:
+                assert(false);
+                break;
             }
         }
 

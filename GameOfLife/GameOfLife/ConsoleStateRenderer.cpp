@@ -2,8 +2,6 @@
 
 #include <windows.h>
 
-#include <iostream>
-
 namespace GameOfLife
 {
     class ConsoleStateRenderer::Pimpl
@@ -21,8 +19,17 @@ namespace GameOfLife
             SetConsoleCursorPosition(m_hStdOut, csbiInfo.dwCursorPosition);
         }
 
-        void WriteCharacter(char c)
+        void WriteCharacter(char c, WORD color = 0)
         {
+            if (color)
+            {
+                SetConsoleTextAttribute(m_hStdOut, color);
+            }
+            else
+            {
+                SetConsoleTextAttribute(m_hStdOut, 7);
+            }
+
             DWORD numCharactersWritten;
             WriteConsole(m_hStdOut, &c, 1, &numCharactersWritten, nullptr);
         }
@@ -61,6 +68,10 @@ namespace GameOfLife
             }
         }
 
+
+        static const WORD ColorBuffer[] = { BACKGROUND_BLUE, BACKGROUND_GREEN, BACKGROUND_RED };
+        int colorIndex = 0;
+
         const auto& subgrids = state.GetSubgrids();
         for (const auto& subgrid : subgrids)
         {
@@ -76,12 +87,18 @@ namespace GameOfLife
                         int cursorX = static_cast<int>(x - state.XMin());
                         int cursorY = static_cast<int>(y - state.YMin());
                         m_spPimpl->SetCursorPosition(cursorX, cursorY);
-                        m_spPimpl->WriteCharacter('+');
+                        m_spPimpl->WriteCharacter('+', ColorBuffer[colorIndex]);
                     }
                 }
             }
+
+            colorIndex = (colorIndex + 1) % ARRAYSIZE(ColorBuffer);
         }
 
-        m_spPimpl->SetCursorPosition(state.Width() - 1, state.Height() - 1);
+        m_spPimpl->SetCursorPosition(
+            static_cast<int>(state.Width()),
+            static_cast<int>(state.Height())
+            );
+        m_spPimpl->WriteCharacter(' '); // Resets the color for next round.
     }
 }
