@@ -64,7 +64,7 @@ namespace
         //
         // TODO: ensure that this is aligned to cache-line boundaries.
         //
-        const size_t GridLength = (width + 2) * (height + 2);
+        const size_t GridLength = width * height;
         auto spGrid = std::shared_ptr<uint8_t>(new uint8_t[GridLength], std::default_delete<uint8_t[]>());
 
         memset(spGrid.get(), 0, GridLength);
@@ -75,61 +75,6 @@ namespace
 
 namespace GameOfLife
 {
-    SubGrid::SubGrid(SubGridGraph& graph, const InitialState & initialState) 
-        : m_generation(0), m_gridGraph(graph)
-    {
-        m_xMin = std::numeric_limits<int64_t>::max();
-        m_yMin = std::numeric_limits<int64_t>::max();
-
-        //
-        // Two passes to initialize: Determine dimensions of our buffer, then
-        // actually initialize the state.
-        //
-
-        int64_t xMax = std::numeric_limits<int64_t>::min();
-        int64_t yMax = std::numeric_limits<int64_t>::min();
-        for (const auto& cell : initialState)
-        {
-            if (cell.X < m_xMin)
-            {
-                m_xMin = cell.X;
-            }
-            else if (cell.X > xMax)
-            {
-                xMax = cell.X;
-            }
-
-            if (cell.Y < m_yMin)
-            {
-                m_yMin = cell.Y;
-            }
-            else if (cell.Y > yMax)
-            {
-                yMax = cell.Y;
-            }
-        }
-
-        m_width  = xMax - m_xMin + 1;
-        m_height = yMax - m_yMin + 1;
-
-        ValidateDimensions(m_width, m_height);
-
-        m_spCellGrid[0] = CreateCellGrid(m_width, m_height);
-        m_spCellGrid[1] = CreateCellGrid(m_width, m_height);
-        m_pCurrentCellGrid = m_spCellGrid[0].get();
-
-        //
-        // One more pass to initialize state...
-        //
-
-        for (const auto& cell : initialState)
-        {
-            RaiseCell(cell.X, cell.Y);
-        }
-
-        m_coordinates = std::make_pair(m_xMin, m_yMin);
-    }
-
     SubGrid::SubGrid(SubGridGraph& graph, int64_t xmin, int64_t width, int64_t ymin, int64_t height)
         : RectangularGrid(xmin, width, ymin, height),
           m_generation(0),
@@ -140,8 +85,14 @@ namespace GameOfLife
         m_spCellGrid[0] = std::make_shared<uint8_t>();
         m_spCellGrid[1] = std::make_shared<uint8_t>();
 
-        m_spCellGrid[0] = CreateCellGrid(m_width, m_height);
-        m_spCellGrid[1] = CreateCellGrid(m_width, m_height);
+        //
+        // +2 to make room for ghost buffers.
+        //
+        m_bufferWidth  = m_width + 2;
+        m_bufferHeight = m_height + 2;
+
+        m_spCellGrid[0] = CreateCellGrid(m_bufferWidth, m_bufferHeight);
+        m_spCellGrid[1] = CreateCellGrid(m_bufferWidth, m_bufferHeight);
         m_pCurrentCellGrid = m_spCellGrid[0].get();
 
         m_coordinates = std::make_pair(m_xMin, m_yMin);
@@ -163,9 +114,9 @@ namespace GameOfLife
         y = y - m_yMin + 1;
 
         assert(x >= 0 && y >= 0);
-        assert(x < m_width + 2 && y < m_height + 2);
+        assert(x < m_bufferWidth && y < m_bufferHeight);
 
-        return static_cast<size_t>(x + (m_width + 2) * y);
+        return static_cast<size_t>(x + m_bufferWidth * y);
     }
 
     void SubGrid::RaiseCell(uint8_t* pGrid, int64_t x, int64_t y)
@@ -231,8 +182,8 @@ namespace GameOfLife
         for (int64_t i = 0; i < m_height; i++)
         {
             *pDst = *pSrc;
-            pDst += (m_width + 2);
-            pSrc += (other.m_width + 2);
+            pDst += m_bufferWidth;
+            pSrc += other.m_bufferWidth;
         }
     }
 

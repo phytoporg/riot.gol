@@ -5,8 +5,6 @@
 #include <cctype> // tolower
 
 #include "GameOfLife/Cell.h"
-#include "GameOfLife/InitialState.h"
-#include "GameOfLife/GameRunner.h"
 #include "GameOfLife/ConsoleStateRenderer.h"
 
 void PrintUsage(const std::string& programName)
@@ -30,23 +28,23 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    GameOfLife::InitialState state;
+    std::vector<GameOfLife::Cell> cells;
 
     char paren, comma;
     int64_t cellX, cellY;
 
     while ((in >> paren >> cellX >> comma >> cellY >> paren) && paren == ')' && comma == ',')
     {
-        state.emplace_back(cellX, cellY, false);
+        cells.emplace_back(cellX, cellY, false);
     }
 
-    if (state.empty())
+    if (cells.empty())
     {
         std::cerr << "No valid cells specified in " << filename << std::endl;
         return -1;
     }
 
-    GameOfLife::GameRunner runner(state);
+    GameOfLife::State state(cells);
 
     //
     // I expect a ctrl+c, yo. TODO: handle that sigint
@@ -54,7 +52,6 @@ int main(int argc, char** argv)
     GameOfLife::ConsoleStateRenderer renderer;
     do
     {
-        const auto& state = runner.CurrentState();
         renderer.Draw(state);
 
         char c = std::cin.get();
@@ -62,7 +59,7 @@ int main(int argc, char** argv)
         {
             break;
         }
-    } while (runner.Tick());
+    } while (state.AdvanceGeneration());
 
     return 0;
 }

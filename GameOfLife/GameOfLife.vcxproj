@@ -20,7 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GameOfLife\ConsoleStateRenderer.cpp" />
-    <ClCompile Include="GameOfLife\GameRunner.cpp" />
     <ClCompile Include="GameOfLife\State.cpp" />
     <ClCompile Include="GameOfLife\SubGrid.cpp" />
     <ClCompile Include="GameOfLife\SubgridGraph.cpp" />
@@ -29,8 +28,6 @@
   <ItemGroup>
     <ClInclude Include="GameOfLife\Cell.h" />
     <ClInclude Include="GameOfLife\ConsoleStateRenderer.h" />
-    <ClInclude Include="GameOfLife\GameRunner.h" />
-    <ClInclude Include="GameOfLife\InitialState.h" />
     <ClInclude Include="GameOfLife\RectangularGrid.h" />
     <ClInclude Include="GameOfLife\State.h" />
     <ClInclude Include="GameOfLife\SubGrid.h" />

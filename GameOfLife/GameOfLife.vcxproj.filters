@@ -13,9 +13,6 @@
     <ClCompile Include="GameOfLife\ConsoleStateRenderer.cpp">
       <Filter>GameOfLife</Filter>
     </ClCompile>
-    <ClCompile Include="GameOfLife\GameRunner.cpp">
-      <Filter>GameOfLife</Filter>
-    </ClCompile>
     <ClCompile Include="GameOfLife\State.cpp">
       <Filter>GameOfLife</Filter>
     </ClCompile>
@@ -28,12 +25,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameOfLife\Cell.h">
-      <Filter>GameOfLife</Filter>
-    </ClInclude>
-    <ClInclude Include="GameOfLife\GameRunner.h">
-      <Filter>GameOfLife</Filter>
-    </ClInclude>
-    <ClInclude Include="GameOfLife\InitialState.h">
       <Filter>GameOfLife</Filter>
     </ClInclude>
     <ClInclude Include="GameOfLife\State.h">

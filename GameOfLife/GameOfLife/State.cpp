@@ -4,12 +4,9 @@
 #include <cassert>
 #include <algorithm>
 
-// TEMP
-#include <iostream>
-
 namespace GameOfLife
 {
-    State::State(const InitialState& initialState)
+    State::State(const std::vector<Cell>& initialState)
     {
         assert(!initialState.empty());
         int64_t xMin = std::numeric_limits<int64_t>::max();
@@ -102,7 +99,7 @@ namespace GameOfLife
                         if (m_gridGraph.QueryVertex(NeighborCoordinates, &pNeighbor))
                         {
                             const AdjacencyIndex Adjacency = 
-                                m_gridGraph.GetIndexFromNeighborPosition(std::make_pair(dx, dy));
+                                SubGridGraph::GetIndexFromNeighborPosition(std::make_pair(dx, dy));
                             m_gridGraph.AddEdge(subgrid, *pNeighbor, Adjacency);
                         }
                     }

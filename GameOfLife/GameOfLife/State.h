@@ -4,7 +4,6 @@
 // The full game state. Just a 2D array for now.
 //
 
-#include "InitialState.h"
 #include "SubGrid.h"
 #include "Cell.h"
 #include "RectangularGrid.h"
@@ -17,7 +16,7 @@ namespace GameOfLife
     class State : public RectangularGrid
     {
     public:
-        State(const InitialState& initialState);
+        State(const std::vector<Cell>& initialState);
 
         bool AdvanceGeneration();
         const std::vector<SubGrid>& GetSubgrids() const; 

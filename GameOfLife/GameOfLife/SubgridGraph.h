@@ -33,9 +33,9 @@ namespace GameOfLife
         SubGridGraph();
         ~SubGridGraph();
 
-        bool GetNeighborArray(const SubGrid& subgrid, SubGrid**& ppNeighbors) const;
+        static AdjacencyIndex GetIndexFromNeighborPosition(SubGrid::CoordinateType coord);
 
-        AdjacencyIndex GetIndexFromNeighborPosition(SubGrid::CoordinateType coord);
+        bool GetNeighborArray(const SubGrid& subgrid, SubGrid**& ppNeighbors) const;
 
         bool AddVertex(const SubGrid& subgrid);
         bool RemoveVertex(const SubGrid& subgrid);
@@ -45,33 +45,14 @@ namespace GameOfLife
             ) const;
 
         bool AddEdge(
-            const SubGrid::CoordinateType& coord1,
-            const SubGrid::CoordinateType& coord2
-            );
-        bool AddEdge(
             const SubGrid& subgrid1,
             const SubGrid& subgrid2,
             AdjacencyIndex adjacency
             );
 
-        bool RemoveEdge(const SubGrid& subgrid1, const SubGrid& subgrid2);
-
-        //
-        // Executes f(s, *this) for each subgrid s in the container.
-        //
-        void ProcessVertices(
-            std::function<void(SubGrid& subgrid, SubGridGraph& graph)>& f
-            );
-
     private:
         SubGridGraph(const SubGridGraph& other) = delete;
         SubGridGraph& operator=(const SubGridGraph& other) = delete;
-
-        bool 
-        RemoveEdge(
-            const SubGrid::CoordinateType& coord1,
-            const SubGrid::CoordinateType& coord2
-            );
 
         struct Pimpl;
         std::unique_ptr<Pimpl> m_spPimpl;

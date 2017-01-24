@@ -104,10 +104,6 @@ namespace GameOfLife
         auto it = m_spPimpl->VertexLookup.find(Coords);
         if (it != m_spPimpl->VertexLookup.end()) { return false; }
 
-        //
-        // This function won't modify subgrid, but no gaurantee that
-        // it remains untouched following a call to ProcessVertices().
-        //
         m_spPimpl->VertexLookup[Coords] = { const_cast<SubGrid*>(&subgrid), {} };
 
         return true;
@@ -169,30 +165,6 @@ namespace GameOfLife
     }
 
     bool SubGridGraph::AddEdge(
-        const SubGrid::CoordinateType& coord1,
-        const SubGrid::CoordinateType& coord2
-        )
-    {
-        auto it1 = m_spPimpl->VertexLookup.find(coord1);
-        if (it1 == m_spPimpl->VertexLookup.end()) { return false; }
-
-        auto it2 = m_spPimpl->VertexLookup.find(coord2);
-        if (it2 == m_spPimpl->VertexLookup.end()) { return false; }
-
-        const auto OneToTwo = std::make_pair(
-            (coord2.first  - coord1.first)  / SubGrid::SUBGRID_WIDTH,
-            (coord2.second - coord1.second) / SubGrid::SUBGRID_HEIGHT
-            );
-        const AdjacencyIndex OneToTwoIndex = GetIndexFromNeighborPosition(OneToTwo);
-        const AdjacencyIndex TwoToOneIndex = GetReflectedAdjacencyIndex(OneToTwoIndex);
-
-        it1->second.Neighbors[OneToTwoIndex] = it2->second.pSubGrid;
-        it2->second.Neighbors[TwoToOneIndex] = it1->second.pSubGrid;
-
-        return true;
-    }
-
-    bool SubGridGraph::AddEdge(
         const SubGrid& subgrid1,
         const SubGrid& subgrid2,
         AdjacencyIndex adjacency
@@ -211,62 +183,5 @@ namespace GameOfLife
         it2->second.Neighbors[TwoToOneIndex] = const_cast<SubGrid*>(&subgrid1);
 
         return true;
-    }
-
-    bool SubGridGraph::RemoveEdge(const SubGrid& subgrid1, const SubGrid& subgrid2)
-    {
-        const auto Coordinates1 = subgrid1.GetCoordinates();
-        const auto Coordinates2 = subgrid2.GetCoordinates();
-
-        return RemoveEdge(Coordinates1, Coordinates2);
-    }
-
-    bool SubGridGraph::RemoveEdge(
-        const SubGrid::CoordinateType& coord1,
-        const SubGrid::CoordinateType& coord2
-        )
-    {
-        auto it1 = m_spPimpl->VertexLookup.find(coord1);
-        if (it1 == m_spPimpl->VertexLookup.end()) { return false; }
-
-        auto it2 = m_spPimpl->VertexLookup.find(coord2);
-        if (it2 == m_spPimpl->VertexLookup.end()) { return false; }
-
-        int i = 0;
-        for (; i < AdjacencyIndex::MAX; i++)
-        {
-            auto& pNeighbor = it1->second.Neighbors[i];
-            if (pNeighbor == it2->second.pSubGrid)
-            {
-                pNeighbor = nullptr;
-
-                const AdjacencyIndex Reflectedindex =
-                    GetReflectedAdjacencyIndex(static_cast<AdjacencyIndex>(i));
-
-                //
-                // We somehow have asymmetries in the graph edges.
-                //
-                assert(it2->second.Neighbors[Reflectedindex] != nullptr);
-                it2->second.Neighbors[Reflectedindex] = nullptr;
-                break;
-            }
-        }
-
-        if (i >= AdjacencyIndex::MAX)
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    void SubGridGraph::ProcessVertices(
-        std::function<void(SubGrid& subgrid, SubGridGraph& graph)>& f
-        )
-    {
-        for (auto p : m_spPimpl->VertexLookup)
-        {
-            f(*p.second.pSubGrid, *this);
-        }
     }
 }

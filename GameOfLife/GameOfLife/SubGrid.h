@@ -5,7 +5,6 @@
 // state.
 //
 
-#include "InitialState.h"
 #include "RectangularGrid.h"
 
 #include <memory>
@@ -22,7 +21,6 @@ namespace GameOfLife
         static const int64_t SUBGRID_WIDTH  = 30;
         static const int64_t SUBGRID_HEIGHT = 30;
 
-        SubGrid(SubGridGraph& graph, const InitialState& initialState);
         SubGrid(SubGridGraph& graph, int64_t xmin, int64_t width, int64_t ymin, int64_t height);
 
         SubGrid(const SubGrid& other);
@@ -65,5 +63,8 @@ namespace GameOfLife
         CoordinateType m_coordinates;
         uint64_t      m_generation;
         SubGridGraph& m_gridGraph;
+
+        uint64_t m_bufferWidth;
+        uint64_t m_bufferHeight;
     };
 }
