@@ -232,7 +232,7 @@ namespace GameOfLife
         {
             *pDst = *pSrc;
             pDst += (m_width + 2);
-            pSrc += (m_width + 2);
+            pSrc += (other.m_width + 2);
         }
     }
 
@@ -256,6 +256,10 @@ namespace GameOfLife
                 continue;
             }
 
+            //
+            // Use the proper grid pointer for our neighbor's data. TODO: 
+            // interface should refer to generation. This is clunky.
+            //
             uint8_t* pNeighborGrid = pNeighbor->m_pCurrentCellGrid;
             if (pNeighbor->m_generation > m_generation)
             {
@@ -278,13 +282,9 @@ namespace GameOfLife
                         );
                 break;
             case AdjacencyIndex::TOP:
-                //
-                // TODO: Version of this function which takes the other grid pointer. We've
-                // already determined it, no need to do it twice.
-                //
                 CopyRowFrom(
                     *pNeighbor, pNeighborGrid,
-                    pNeighbor->YMin() + pNeighbor->Width() - 1,
+                    pNeighbor->YMin() + pNeighbor->Height() - 1,
                     m_yMin - 1
                     );
                 break;
@@ -339,8 +339,12 @@ namespace GameOfLife
             }
         }
 
-        decltype(m_pCurrentCellGrid) pOtherGrid =
-            OtherPointer(m_pCurrentCellGrid, m_spCellGrid[0].get(), m_spCellGrid[1].get());
+        uint8_t* pOtherGrid =
+            OtherPointer(
+                m_pCurrentCellGrid,
+                m_spCellGrid[0].get(),
+                m_spCellGrid[1].get()
+                );
 
         for (int64_t y = m_yMin; y < m_yMin + m_height; y++)
         {

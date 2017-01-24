@@ -35,6 +35,8 @@ namespace GameOfLife
 
         bool GetNeighborArray(const SubGrid& subgrid, SubGrid**& ppNeighbors) const;
 
+        AdjacencyIndex GetIndexFromNeighborPosition(SubGrid::CoordinateType coord);
+
         bool AddVertex(const SubGrid& subgrid);
         bool RemoveVertex(const SubGrid& subgrid);
         bool QueryVertex(
@@ -42,11 +44,16 @@ namespace GameOfLife
             SubGrid** ppSubGrid
             ) const;
 
-        bool AddEdge(const SubGrid& subgrid1, const SubGrid& subgrid2);
         bool AddEdge(
             const SubGrid::CoordinateType& coord1,
             const SubGrid::CoordinateType& coord2
             );
+        bool AddEdge(
+            const SubGrid& subgrid1,
+            const SubGrid& subgrid2,
+            AdjacencyIndex adjacency
+            );
+
         bool RemoveEdge(const SubGrid& subgrid1, const SubGrid& subgrid2);
 
         //

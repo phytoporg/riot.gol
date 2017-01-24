@@ -17,9 +17,6 @@ namespace GameOfLife
     class State : public RectangularGrid
     {
     public:
-        static const int64_t SUBGRID_WIDTH  = 20;
-        static const int64_t SUBGRID_HEIGHT = 20;
-
         State(const InitialState& initialState);
 
         bool AdvanceGeneration();

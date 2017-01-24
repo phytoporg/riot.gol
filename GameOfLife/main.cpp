@@ -40,6 +40,12 @@ int main(int argc, char** argv)
         state.emplace_back(cellX, cellY, false);
     }
 
+    if (state.empty())
+    {
+        std::cerr << "No valid cells specified in " << filename << std::endl;
+        return -1;
+    }
+
     GameOfLife::GameRunner runner(state);
 
     //

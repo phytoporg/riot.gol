@@ -19,6 +19,9 @@ namespace GameOfLife
     public:
         typedef std::pair<int64_t, int64_t> CoordinateType;
 
+        static const int64_t SUBGRID_WIDTH  = 30;
+        static const int64_t SUBGRID_HEIGHT = 30;
+
         SubGrid(SubGridGraph& graph, const InitialState& initialState);
         SubGrid(SubGridGraph& graph, int64_t xmin, int64_t width, int64_t ymin, int64_t height);
 

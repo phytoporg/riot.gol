@@ -7,31 +7,6 @@
 
 namespace
 {
-    GameOfLife::AdjacencyIndex GetIndexFromNeighborPosition(
-        const GameOfLife::SubGrid::CoordinateType& coord
-        )
-    {
-        using GameOfLife::AdjacencyIndex;
-        static const AdjacencyIndex LUT[3][3] =
-        {
-            { AdjacencyIndex::TOP_LEFT,    AdjacencyIndex::TOP,    AdjacencyIndex::TOP_RIGHT    },
-            { AdjacencyIndex::LEFT,        AdjacencyIndex::MAX,    AdjacencyIndex::RIGHT        },
-            { AdjacencyIndex::BOTTOM_LEFT, AdjacencyIndex::BOTTOM, AdjacencyIndex::BOTTOM_RIGHT }
-        };
-
-        //
-        // (0,0) is not a neighbor
-        //
-        assert(coord.first || coord.second); 
-
-        //
-        // Bounds check
-        //
-        assert(coord.first <= 1 && coord.second <= 1);
-        assert(coord.first >= -1 && coord.second >= -1);
-        return LUT[coord.second + 1][coord.first + 1];
-    }
-
     GameOfLife::AdjacencyIndex GetReflectedAdjacencyIndex(
         const GameOfLife::AdjacencyIndex& index
         )
@@ -63,7 +38,6 @@ namespace std
         }
     };
 }
-
 
 namespace GameOfLife
 {
@@ -97,6 +71,31 @@ namespace GameOfLife
         ppNeighbors = it->second.Neighbors;
         return true;
     }
+
+    AdjacencyIndex SubGridGraph::GetIndexFromNeighborPosition(
+        SubGrid::CoordinateType coord
+        )
+    {
+        static const AdjacencyIndex LUT[3][3] =
+        {
+            { AdjacencyIndex::TOP_LEFT,    AdjacencyIndex::TOP,    AdjacencyIndex::TOP_RIGHT    },
+            { AdjacencyIndex::LEFT,        AdjacencyIndex::MAX,    AdjacencyIndex::RIGHT        },
+            { AdjacencyIndex::BOTTOM_LEFT, AdjacencyIndex::BOTTOM, AdjacencyIndex::BOTTOM_RIGHT }
+        };
+
+        //
+        // (0,0) is not a neighbor
+        //
+        assert(coord.first || coord.second); 
+
+        //
+        // Bounds check
+        //
+        assert(coord.first <= 1 && coord.second <= 1);
+        assert(coord.first >= -1 && coord.second >= -1);
+        return LUT[coord.second + 1][coord.first + 1];
+    }
+
 
     bool SubGridGraph::AddVertex(const SubGrid& subgrid)
     {
@@ -169,14 +168,6 @@ namespace GameOfLife
         return true;
     }
 
-    bool SubGridGraph::AddEdge(const SubGrid& subgrid1, const SubGrid& subgrid2)
-    {
-        const auto Coordinates1 = subgrid1.GetCoordinates();
-        const auto Coordinates2 = subgrid2.GetCoordinates();
-
-        return AddEdge(Coordinates1, Coordinates2);
-    }
-
     bool SubGridGraph::AddEdge(
         const SubGrid::CoordinateType& coord1,
         const SubGrid::CoordinateType& coord2
@@ -189,14 +180,35 @@ namespace GameOfLife
         if (it2 == m_spPimpl->VertexLookup.end()) { return false; }
 
         const auto OneToTwo = std::make_pair(
-            (coord2.first  - coord1.first)  / State::SUBGRID_WIDTH,
-            (coord2.second - coord1.second) / State::SUBGRID_HEIGHT
+            (coord2.first  - coord1.first)  / SubGrid::SUBGRID_WIDTH,
+            (coord2.second - coord1.second) / SubGrid::SUBGRID_HEIGHT
             );
         const AdjacencyIndex OneToTwoIndex = GetIndexFromNeighborPosition(OneToTwo);
         const AdjacencyIndex TwoToOneIndex = GetReflectedAdjacencyIndex(OneToTwoIndex);
 
         it1->second.Neighbors[OneToTwoIndex] = it2->second.pSubGrid;
         it2->second.Neighbors[TwoToOneIndex] = it1->second.pSubGrid;
+
+        return true;
+    }
+
+    bool SubGridGraph::AddEdge(
+        const SubGrid& subgrid1,
+        const SubGrid& subgrid2,
+        AdjacencyIndex adjacency
+        )
+    {
+        auto it1 = m_spPimpl->VertexLookup.find(subgrid1.GetCoordinates());
+        if (it1 == m_spPimpl->VertexLookup.end()) { return false; }
+
+        auto it2 = m_spPimpl->VertexLookup.find(subgrid2.GetCoordinates());
+        if (it2 == m_spPimpl->VertexLookup.end()) { return false; }
+
+        const AdjacencyIndex OneToTwoIndex = adjacency;
+        const AdjacencyIndex TwoToOneIndex = GetReflectedAdjacencyIndex(adjacency);
+
+        it1->second.Neighbors[OneToTwoIndex] = const_cast<SubGrid*>(&subgrid2);
+        it2->second.Neighbors[TwoToOneIndex] = const_cast<SubGrid*>(&subgrid1);
 
         return true;
     }

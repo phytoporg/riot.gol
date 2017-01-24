@@ -4,6 +4,9 @@
 #include <cassert>
 #include <algorithm>
 
+// TEMP
+#include <iostream>
+
 namespace GameOfLife
 {
     State::State(const InitialState& initialState)
@@ -28,31 +31,30 @@ namespace GameOfLife
         }
 
         m_xMin   = xMin;
-        m_width  = xMax - xMin + 1;
+        m_width  = std::max(xMax - xMin + 1, SubGrid::SUBGRID_WIDTH);
         m_yMin   = yMin;
-        m_height = yMax - yMin + 1;
+        m_height = std::max(yMax - yMin + 1, SubGrid::SUBGRID_HEIGHT);
 
-        // TEMP
+        //
+        // TODO: Implement proper subgrid storage.
+        //
         m_subgrids.reserve(100);
 
         for (const auto& state : initialState)
         {
-            //
-            // TODO: This is stupid and hideous but it's 1am so fix later.
-            //
-            const int64_t SubgridX = (state.X - m_xMin) / SUBGRID_WIDTH;
-            const int64_t SubgridY = (state.Y - m_yMin) / SUBGRID_HEIGHT;
+            const int64_t SubgridX = (state.X - m_xMin) / SubGrid::SUBGRID_WIDTH;
+            const int64_t SubgridY = (state.Y - m_yMin) / SubGrid::SUBGRID_HEIGHT;
 
-            const int64_t SubgridMinX = m_xMin + SubgridX * SUBGRID_WIDTH;
-            const int64_t SubgridMinY = m_yMin + SubgridY * SUBGRID_HEIGHT;
+            const int64_t SubgridMinX = m_xMin + SubgridX * SubGrid::SUBGRID_WIDTH;
+            const int64_t SubgridMinY = m_yMin + SubgridY * SubGrid::SUBGRID_HEIGHT;
 
             SubGrid* pSubGrid = nullptr;
             if (!m_gridGraph.QueryVertex(std::make_pair(SubgridMinX, SubgridMinY), &pSubGrid))
             {
                 m_subgrids.emplace_back(
                     m_gridGraph,
-                    SubgridMinX, std::min(SUBGRID_WIDTH,  xMax - SubgridMinX + 1), 
-                    SubgridMinY, std::min(SUBGRID_HEIGHT, yMax - SubgridMinY + 1)
+                    SubgridMinX, std::min(SubGrid::SUBGRID_WIDTH,  xMax - SubgridMinX + 1), 
+                    SubgridMinY, std::min(SubGrid::SUBGRID_HEIGHT, yMax - SubgridMinY + 1)
                     );
 
                 auto& subGrid = m_subgrids.back();
@@ -63,6 +65,11 @@ namespace GameOfLife
             {
                 pSubGrid->RaiseCell(state.X, state.Y);
             }
+        }
+
+        if (m_subgrids.size() == 1)
+        {
+            return;
         }
 
         //
@@ -78,15 +85,25 @@ namespace GameOfLife
                 {
                     if (dx || dy)
                     {
-                        const auto NeighborCoordinates =
-                            std::make_pair(
-                                SubgridCoordinates.first + dx * SUBGRID_WIDTH,
-                                SubgridCoordinates.second + dy * SUBGRID_HEIGHT
-                                );
+                        // 
+                        // State is toroidal, so account for wrapping.
+                        //
+
+                        int64_t neighborX = SubgridCoordinates.first + dx * SubGrid::SUBGRID_WIDTH;
+                        if (neighborX > xMax)      { neighborX = xMin; }
+                        else if (neighborX < xMin) { neighborX = xMin + (m_width / SubGrid::SUBGRID_WIDTH) * SubGrid::SUBGRID_WIDTH; }
+
+                        int64_t neighborY = SubgridCoordinates.second + dy * SubGrid::SUBGRID_HEIGHT;
+                        if (neighborY > yMax)      { neighborY = yMin; }
+                        else if (neighborY < yMin) { neighborY = yMin + (m_height / SubGrid::SUBGRID_HEIGHT) * SubGrid::SUBGRID_HEIGHT; }
+
+                        const auto NeighborCoordinates = std::make_pair(neighborX, neighborY);
                         SubGrid* pNeighbor;
                         if (m_gridGraph.QueryVertex(NeighborCoordinates, &pNeighbor))
                         {
-                            m_gridGraph.AddEdge(SubgridCoordinates, NeighborCoordinates);
+                            const AdjacencyIndex Adjacency = 
+                                m_gridGraph.GetIndexFromNeighborPosition(std::make_pair(dx, dy));
+                            m_gridGraph.AddEdge(subgrid, *pNeighbor, Adjacency);
                         }
                     }
                 }
