@@ -187,7 +187,7 @@ namespace GameOfLife
         }
     }
 
-    void SubGrid::AdvanceGeneration()
+    uint32_t SubGrid::AdvanceGeneration()
     {
         //
         // Copy neighbor border data if it exists.
@@ -297,6 +297,7 @@ namespace GameOfLife
                 m_spCellGrid[1].get()
                 );
 
+        uint32_t numCells = 0;
         for (int64_t y = m_yMin; y < m_yMin + m_height; y++)
         {
             for (int64_t x = m_xMin; x < m_xMin + m_width; x++)
@@ -311,6 +312,7 @@ namespace GameOfLife
                     else
                     {
                         RaiseCell(pOtherGrid, x, y);
+                        ++numCells;
                     }
                 }
                 else
@@ -322,6 +324,7 @@ namespace GameOfLife
                     else
                     {
                         KillCell(pOtherGrid, x, y);
+                        ++numCells;
                     }
                 }
             }
@@ -329,5 +332,103 @@ namespace GameOfLife
 
         ++m_generation;
         m_pCurrentCellGrid = pOtherGrid;
+
+        return numCells;
+    }
+
+    bool SubGrid::IsNextGenerationNeighbor(AdjacencyIndex adjacency) const
+    {
+        const uint32_t MagicNumber = 0x010101;
+        switch (adjacency)
+        {
+            //
+            // TODO: These
+            //
+        case GameOfLife::TOP_LEFT:
+            break;
+        case GameOfLife::TOP_RIGHT:
+            break;
+        case GameOfLife::BOTTOM_LEFT:
+            break;
+        case GameOfLife::BOTTOM_RIGHT:
+            break;
+
+        case GameOfLife::TOP:
+        {
+            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(m_xMin, m_yMin)];
+            for (int64_t i = 0; i < m_width; i++)
+            {
+                const uint32_t Value = *(reinterpret_cast<uint32_t*>(pStart)) >> 8;
+                if (Value == MagicNumber)
+                {
+                    return true;
+                }
+            }
+        }
+            break;
+        case GameOfLife::BOTTOM:
+        {
+            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(m_xMin, m_yMin + m_height - 1)];
+            for (int64_t i = 0; i < m_width; i++)
+            {
+                const uint32_t Value = *(reinterpret_cast<uint32_t*>(pStart)) >> 8;
+                if (Value == MagicNumber)
+                {
+                    return true;
+                }
+            }
+        }
+            break;
+
+        case GameOfLife::LEFT:
+        {
+            uint8_t previousValue = 0;
+            uint8_t consecutiveCells = 0;
+            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(m_xMin, m_yMin)];
+            for (int64_t i = 0; i < m_height; i++)
+            {
+                if (*pStart && previousValue)
+                {
+                    ++consecutiveCells;
+                }
+
+                if (consecutiveCells == 3)
+                {
+                    return true;
+                }
+
+                previousValue = *pStart;
+                pStart += m_bufferWidth;
+            }
+        }
+            break;
+        case GameOfLife::RIGHT:
+        {
+            uint8_t previousValue = 0;
+            uint8_t consecutiveCells = 0;
+            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(m_xMin + m_width - 1, m_yMin)];
+            for (int64_t i = 0; i < m_height; i++)
+            {
+                if (*pStart && previousValue)
+                {
+                    ++consecutiveCells;
+                }
+
+                if (consecutiveCells == 3)
+                {
+                    return true;
+                }
+
+                previousValue = *pStart;
+                pStart += m_bufferWidth;
+            }
+        }
+            break;
+        default:
+            assert(false);
+            break;
+        }
+
+        return false;
     }
 }

@@ -6,6 +6,7 @@
 //
 
 #include "RectangularGrid.h"
+#include "AdjacencyIndex.h"
 
 #include <memory>
 
@@ -40,8 +41,17 @@ namespace GameOfLife
 
         const CoordinateType& GetCoordinates() const;
          
-        void AdvanceGeneration();
+        //
+        // Returns the number of cells alive in the next generation
+        //
+        uint32_t AdvanceGeneration();
         uint64_t GetGeneration() const { return m_generation; }
+
+        //
+        // Determines if the next generation will impact cells in a neighbor
+        // which does not yet exist.
+        //
+        bool IsNextGenerationNeighbor(AdjacencyIndex adjacency) const;
 
     private:
         //
@@ -64,7 +74,7 @@ namespace GameOfLife
         uint64_t      m_generation;
         SubGridGraph& m_gridGraph;
 
-        uint64_t m_bufferWidth;
-        uint64_t m_bufferHeight;
+        int64_t m_bufferWidth;
+        int64_t m_bufferHeight;
     };
 }

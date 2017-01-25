@@ -26,6 +26,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GameOfLife\AdjacencyIndex.h" />
     <ClInclude Include="GameOfLife\Cell.h" />
     <ClInclude Include="GameOfLife\ConsoleStateRenderer.h" />
     <ClInclude Include="GameOfLife\RectangularGrid.h" />

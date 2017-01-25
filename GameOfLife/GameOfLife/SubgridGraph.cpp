@@ -96,6 +96,23 @@ namespace GameOfLife
         return LUT[coord.second + 1][coord.first + 1];
     }
 
+    SubGrid::CoordinateType SubGridGraph::GetNeighborPositionFromIndex(AdjacencyIndex index)
+    {
+        static const SubGrid::CoordinateType LUT[] =
+        {
+            std::make_pair<int64_t, int64_t>(-1, -1), // TOP_LEFT
+            std::make_pair<int64_t, int64_t>( 0, -1), // TOP
+            std::make_pair<int64_t, int64_t>( 1, -1), // TOP_RIGHT
+            std::make_pair<int64_t, int64_t>(-1,  0), // LEFT
+            std::make_pair<int64_t, int64_t>( 1,  0), // RIGHT
+            std::make_pair<int64_t, int64_t>(-1,  1), // BOTTOM_LEFT
+            std::make_pair<int64_t, int64_t>( 0,  1), // BOTTOM
+            std::make_pair<int64_t, int64_t>( 1,  1)  // BOTTOM_RIGHT
+        };
+
+        assert(index > 0 && index < AdjacencyIndex::MAX);
+        return LUT[index];
+    }
 
     bool SubGridGraph::AddVertex(const SubGrid& subgrid)
     {

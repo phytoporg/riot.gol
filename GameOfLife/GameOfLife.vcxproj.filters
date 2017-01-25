@@ -45,5 +45,8 @@
     <ClInclude Include="Utility\Hash.h">
       <Filter>Utility</Filter>
     </ClInclude>
+    <ClInclude Include="GameOfLife\AdjacencyIndex.h">
+      <Filter>GameOfLife</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

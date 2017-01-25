@@ -4,6 +4,62 @@
 #include <cassert>
 #include <algorithm>
 
+namespace
+{
+    void 
+    MaybeCreateNewNeighbors(
+        const GameOfLife::SubGrid& subgrid,
+        const GameOfLife::RectangularGrid& stateDimensions,
+        GameOfLife::SubGridGraph& gridGraph,
+        std::vector<GameOfLife::SubGrid>& subgrids
+        )
+    {
+        using namespace GameOfLife;
+        for (int i = 0; i < GameOfLife::AdjacencyIndex::MAX; ++i)
+        {
+            const auto Adjacency = static_cast<AdjacencyIndex>(i);
+            if (subgrid.IsNextGenerationNeighbor(Adjacency))
+            {
+                const auto NeighborSubgridPosition =
+                    SubGridGraph::GetNeighborPositionFromIndex(Adjacency);
+                const int64_t NeighborMinX =
+                    stateDimensions.XMin() + NeighborSubgridPosition.first * SubGrid::SUBGRID_WIDTH;
+                const int64_t NeighborMinY =
+                    stateDimensions.YMin() + NeighborSubgridPosition.second * SubGrid::SUBGRID_HEIGHT;
+
+                const int64_t XMax = stateDimensions.XMin() + stateDimensions.Width();
+                const int64_t YMax = stateDimensions.YMin() + stateDimensions.Height();
+
+                subgrids.emplace_back(
+                    gridGraph,
+                    NeighborMinX, std::min(SubGrid::SUBGRID_WIDTH, XMax),
+                    NeighborMinY, std::min(SubGrid::SUBGRID_HEIGHT, YMax)
+                    );
+                gridGraph.AddVertex(subgrids.back());
+                gridGraph.AddEdge(subgrid, subgrids.back(), Adjacency);
+            }
+        }
+    }
+
+    void 
+    MaybeRetireSubgrid(
+        uint32_t numCells,
+        const GameOfLife::RectangularGrid& stateDimensions,
+        const GameOfLife::SubGrid& subgrid,
+        GameOfLife::SubGridGraph& gridGraph,
+        std::vector<GameOfLife::SubGrid>& subgrids
+        )
+    {
+        if (numCells)
+        {
+            return;
+        }
+
+        gridGraph.RemoveVertex(subgrid);
+        // TODO: remove subgrid from storage, akak subgrids
+    }
+}
+
 namespace GameOfLife
 {
     State::State(const std::vector<Cell>& initialState)
@@ -112,7 +168,11 @@ namespace GameOfLife
     {
         for (auto& subgrid : m_subgrids)
         {
-            subgrid.AdvanceGeneration();
+            MaybeCreateNewNeighbors(subgrid, *this, m_gridGraph, m_subgrids);
+
+            uint32_t numCells = subgrid.AdvanceGeneration();
+
+            MaybeRetireSubgrid(numCells, *this, subgrid, m_gridGraph, m_subgrids);
         }
 
         return true;

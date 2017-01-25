@@ -6,6 +6,7 @@
 //
 
 #include "SubGrid.h"
+#include "AdjacencyIndex.h"
 
 #include <unordered_map>
 #include <utility>
@@ -14,19 +15,6 @@
 
 namespace GameOfLife
 {
-    enum AdjacencyIndex
-    {
-        TOP_LEFT = 0,
-        TOP,
-        TOP_RIGHT,
-        LEFT,
-        RIGHT,
-        BOTTOM_LEFT,
-        BOTTOM,
-        BOTTOM_RIGHT,
-        MAX
-    };
-
     class SubGridGraph
     {
     public:
@@ -34,6 +22,7 @@ namespace GameOfLife
         ~SubGridGraph();
 
         static AdjacencyIndex GetIndexFromNeighborPosition(SubGrid::CoordinateType coord);
+        static SubGrid::CoordinateType GetNeighborPositionFromIndex(AdjacencyIndex coord);
 
         bool GetNeighborArray(const SubGrid& subgrid, SubGrid**& ppNeighbors) const;
 
