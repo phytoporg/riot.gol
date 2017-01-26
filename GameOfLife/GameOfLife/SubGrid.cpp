@@ -78,7 +78,7 @@ namespace GameOfLife
     SubGrid::SubGrid(SubGridGraph& graph, int64_t xmin, int64_t width, int64_t ymin, int64_t height)
         : RectangularGrid(xmin, width, ymin, height),
           m_generation(0),
-          m_gridGraph(graph)
+          m_pGridGraph(&graph)
     {
         ValidateDimensions(m_width, m_height);
 
@@ -96,16 +96,6 @@ namespace GameOfLife
         m_pCurrentCellGrid = m_spCellGrid[0].get();
 
         m_coordinates = std::make_pair(m_xMin, m_yMin);
-    }
-
-    SubGrid::SubGrid(const SubGrid& other)
-        : RectangularGrid(other.m_xMin, other.m_width, other.m_yMin, other.m_height),
-          m_pCurrentCellGrid(other.m_pCurrentCellGrid),
-          m_gridGraph(other.m_gridGraph),
-          m_coordinates(other.m_coordinates)
-    {
-        m_spCellGrid[0] = other.m_spCellGrid[0];
-        m_spCellGrid[1] = other.m_spCellGrid[1];
     }
 
     size_t SubGrid::GetOffset(int64_t x, int64_t y) const
@@ -193,7 +183,7 @@ namespace GameOfLife
         // Copy neighbor border data if it exists.
         //
         SubGrid** ppNeighbors;
-        if (!m_gridGraph.GetNeighborArray(*this, ppNeighbors))
+        if (!m_pGridGraph->GetNeighborArray(*this, ppNeighbors))
         {
             assert(false);
             throw "Subgrid exists but isn't in the grid graph!";
@@ -273,7 +263,7 @@ namespace GameOfLife
                 CopyRowFrom(
                     *pNeighbor, pNeighborGrid,
                     pNeighbor->YMin(),
-                    m_yMin - 1
+                    m_yMin + m_height
                     );
                 break;
             case AdjacencyIndex::BOTTOM_RIGHT:
@@ -339,6 +329,19 @@ namespace GameOfLife
     bool SubGrid::IsNextGenerationNeighbor(AdjacencyIndex adjacency) const
     {
         const uint32_t MagicNumber = 0x010101;
+
+        SubGrid** ppNeighbors;
+        if (!m_pGridGraph->GetNeighborArray(*this, ppNeighbors))
+        {
+            assert(false);
+            throw "Subgrid exists but isn't in the grid graph!";
+        }
+
+        if (ppNeighbors[adjacency])
+        {
+            return false;
+        }
+
         switch (adjacency)
         {
             //
@@ -363,6 +366,8 @@ namespace GameOfLife
                 {
                     return true;
                 }
+
+                pStart++;
             }
         }
             break;
@@ -376,6 +381,8 @@ namespace GameOfLife
                 {
                     return true;
                 }
+
+                pStart++;
             }
         }
             break;

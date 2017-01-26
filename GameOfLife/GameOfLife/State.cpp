@@ -27,16 +27,14 @@ namespace
                 const int64_t NeighborMinY =
                     stateDimensions.YMin() + NeighborSubgridPosition.second * SubGrid::SUBGRID_HEIGHT;
 
-                const int64_t XMax = stateDimensions.XMin() + stateDimensions.Width();
-                const int64_t YMax = stateDimensions.YMin() + stateDimensions.Height();
+                const int64_t xMax = (stateDimensions.XMin() +  stateDimensions.Width()) - NeighborMinX;
+                const int64_t yMax = (stateDimensions.YMin() + stateDimensions.Height()) - NeighborMinY;
 
                 subgrids.emplace_back(
                     gridGraph,
-                    NeighborMinX, std::min(SubGrid::SUBGRID_WIDTH, XMax),
-                    NeighborMinY, std::min(SubGrid::SUBGRID_HEIGHT, YMax)
+                    NeighborMinX, std::min(SubGrid::SUBGRID_WIDTH, xMax),
+                    NeighborMinY, std::min(SubGrid::SUBGRID_HEIGHT, yMax)
                     );
-                gridGraph.AddVertex(subgrids.back());
-                gridGraph.AddEdge(subgrid, subgrids.back(), Adjacency);
             }
         }
     }
@@ -126,12 +124,59 @@ namespace GameOfLife
         }
 
         //
-        // Populate adjacency info. TODO: Only assign adjacency to neighbors whose
-        // cells will impact one another.
+        // TODO: What if we have border columns/rows here, too? On init?
+        // May have to create new subgrids here, too.
         //
+        PopulateAdjacencyInfo(m_subgrids.begin(), m_subgrids.end());
+    }
+
+    bool State::AdvanceGeneration()
+    {
+        std::vector<SubGrid> subgridsToAdd;
         for (auto& subgrid : m_subgrids)
         {
-            const auto SubgridCoordinates = std::make_pair(subgrid.XMin(), subgrid.YMin());
+            const uint32_t NumCells = subgrid.AdvanceGeneration();
+
+            MaybeCreateNewNeighbors(subgrid, *this, m_gridGraph, subgridsToAdd);
+            MaybeRetireSubgrid(NumCells, *this, subgrid, m_gridGraph, m_subgrids);
+        }
+
+        const size_t NumAdded = subgridsToAdd.size();
+        if (NumAdded)
+        {
+            m_subgrids.insert(m_subgrids.end(), subgridsToAdd.begin(), subgridsToAdd.end());
+
+            for (auto it = (m_subgrids.end() - NumAdded); it != m_subgrids.end(); ++it)
+            {
+                m_gridGraph.AddVertex(*it);
+            }
+
+            PopulateAdjacencyInfo(m_subgrids.end() - NumAdded, m_subgrids.end());
+        }
+
+        return true;
+    }
+
+    const std::vector<SubGrid>& State::GetSubgrids() const
+    {
+        return m_subgrids;
+    }
+
+    void State::PopulateAdjacencyInfo(
+        std::vector<SubGrid>::const_iterator begin,
+        std::vector<SubGrid>::const_iterator end
+        )
+    {
+        //
+        // TODO: Only assign adjacency to neighbors whose
+        // cells will impact one another.
+        //
+        const int64_t xMax = m_xMin + m_width;
+        const int64_t yMax = m_yMin + m_height;
+
+        for (auto it = begin; it != end; ++it)
+        {
+            const auto SubgridCoordinates = std::make_pair(it->XMin(), it->YMin());
             for (int64_t dy = -1; dy < 2; ++dy)
             {
                 for (int64_t dx = -1; dx < 2; ++dx)
@@ -143,12 +188,12 @@ namespace GameOfLife
                         //
 
                         int64_t neighborX = SubgridCoordinates.first + dx * SubGrid::SUBGRID_WIDTH;
-                        if (neighborX > xMax)      { neighborX = xMin; }
-                        else if (neighborX < xMin) { neighborX = xMin + (m_width / SubGrid::SUBGRID_WIDTH) * SubGrid::SUBGRID_WIDTH; }
+                        if (neighborX > xMax)      { neighborX = m_xMin; }
+                        else if (neighborX < m_xMin) { neighborX = m_xMin + (m_width / SubGrid::SUBGRID_WIDTH) * SubGrid::SUBGRID_WIDTH; }
 
                         int64_t neighborY = SubgridCoordinates.second + dy * SubGrid::SUBGRID_HEIGHT;
-                        if (neighborY > yMax)      { neighborY = yMin; }
-                        else if (neighborY < yMin) { neighborY = yMin + (m_height / SubGrid::SUBGRID_HEIGHT) * SubGrid::SUBGRID_HEIGHT; }
+                        if (neighborY > yMax)      { neighborY = m_yMin; }
+                        else if (neighborY < m_yMin) { neighborY = m_yMin + (m_height / SubGrid::SUBGRID_HEIGHT) * SubGrid::SUBGRID_HEIGHT; }
 
                         const auto NeighborCoordinates = std::make_pair(neighborX, neighborY);
                         SubGrid* pNeighbor;
@@ -156,30 +201,11 @@ namespace GameOfLife
                         {
                             const AdjacencyIndex Adjacency = 
                                 SubGridGraph::GetIndexFromNeighborPosition(std::make_pair(dx, dy));
-                            m_gridGraph.AddEdge(subgrid, *pNeighbor, Adjacency);
+                            m_gridGraph.AddEdge(*it, *pNeighbor, Adjacency);
                         }
                     }
                 }
             }
         }
-    }
-
-    bool State::AdvanceGeneration()
-    {
-        for (auto& subgrid : m_subgrids)
-        {
-            MaybeCreateNewNeighbors(subgrid, *this, m_gridGraph, m_subgrids);
-
-            uint32_t numCells = subgrid.AdvanceGeneration();
-
-            MaybeRetireSubgrid(numCells, *this, subgrid, m_gridGraph, m_subgrids);
-        }
-
-        return true;
-    }
-
-    const std::vector<SubGrid>& State::GetSubgrids() const
-    {
-        return m_subgrids;
     }
 }

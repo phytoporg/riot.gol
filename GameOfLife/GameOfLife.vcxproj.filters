@@ -22,6 +22,7 @@
     <ClCompile Include="GameOfLife\SubgridGraph.cpp">
       <Filter>GameOfLife</Filter>
     </ClCompile>
+    <ClCompile Include="GameOfLife\SubgraphStorage.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameOfLife\Cell.h">
@@ -48,5 +49,6 @@
     <ClInclude Include="GameOfLife\AdjacencyIndex.h">
       <Filter>GameOfLife</Filter>
     </ClInclude>
+    <ClInclude Include="GameOfLife\SubgraphStorage.h" />
   </ItemGroup>
 </Project>

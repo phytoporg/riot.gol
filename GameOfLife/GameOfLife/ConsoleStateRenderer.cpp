@@ -69,7 +69,7 @@ namespace GameOfLife
         }
 
 
-        static const WORD ColorBuffer[] = { BACKGROUND_BLUE, BACKGROUND_GREEN, BACKGROUND_RED };
+        static const WORD ColorBuffer[] = { BACKGROUND_BLUE, BACKGROUND_GREEN, BACKGROUND_RED, BACKGROUND_RED };
         int colorIndex = 0;
 
         const auto& subgrids = state.GetSubgrids();

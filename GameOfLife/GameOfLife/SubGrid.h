@@ -24,13 +24,6 @@ namespace GameOfLife
 
         SubGrid(SubGridGraph& graph, int64_t xmin, int64_t width, int64_t ymin, int64_t height);
 
-        SubGrid(const SubGrid& other);
-
-        //
-        // For STL containers.
-        //
-        SubGrid& operator=(const SubGrid& other) = default;
-
         //
         // (x, y) coordinates are somewhat toroidal due to ghost buffers.
         //
@@ -71,8 +64,8 @@ namespace GameOfLife
         size_t GetOffset(int64_t x, int64_t y) const;
 
         CoordinateType m_coordinates;
-        uint64_t      m_generation;
-        SubGridGraph& m_gridGraph;
+        uint64_t       m_generation;
+        SubGridGraph*  m_pGridGraph;
 
         int64_t m_bufferWidth;
         int64_t m_bufferHeight;

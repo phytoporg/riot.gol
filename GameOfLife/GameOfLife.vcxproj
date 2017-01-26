@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="GameOfLife\ConsoleStateRenderer.cpp" />
     <ClCompile Include="GameOfLife\State.cpp" />
+    <ClCompile Include="GameOfLife\SubgraphStorage.cpp" />
     <ClCompile Include="GameOfLife\SubGrid.cpp" />
     <ClCompile Include="GameOfLife\SubgridGraph.cpp" />
     <ClCompile Include="main.cpp" />
@@ -31,6 +32,7 @@
     <ClInclude Include="GameOfLife\ConsoleStateRenderer.h" />
     <ClInclude Include="GameOfLife\RectangularGrid.h" />
     <ClInclude Include="GameOfLife\State.h" />
+    <ClInclude Include="GameOfLife\SubgraphStorage.h" />
     <ClInclude Include="GameOfLife\SubGrid.h" />
     <ClInclude Include="GameOfLife\SubgridGraph.h" />
     <ClInclude Include="Utility\Hash.h" />

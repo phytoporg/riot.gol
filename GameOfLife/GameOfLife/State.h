@@ -26,6 +26,12 @@ namespace GameOfLife
         State(const State& other) = delete;
         State& operator=(const State& other) = delete;
 
+        void 
+        PopulateAdjacencyInfo(
+            std::vector<SubGrid>::const_iterator begin,
+            std::vector<SubGrid>::const_iterator end
+            );
+
         //
         // Subgrid storage. TODO: Don't use a vector. Will have to incur a linear
         // lookup and "shuffle" cost for deletion. Fine for now, but not great at
