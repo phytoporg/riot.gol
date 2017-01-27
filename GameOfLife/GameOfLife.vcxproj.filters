@@ -22,7 +22,9 @@
     <ClCompile Include="GameOfLife\SubgridGraph.cpp">
       <Filter>GameOfLife</Filter>
     </ClCompile>
-    <ClCompile Include="GameOfLife\SubgraphStorage.cpp" />
+    <ClCompile Include="GameOfLife\SubgridStorage.cpp">
+      <Filter>GameOfLife</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameOfLife\Cell.h">
@@ -49,6 +51,13 @@
     <ClInclude Include="GameOfLife\AdjacencyIndex.h">
       <Filter>GameOfLife</Filter>
     </ClInclude>
-    <ClInclude Include="GameOfLife\SubgraphStorage.h" />
+    <ClInclude Include="Utility\AlignedBuffer.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="Utility\AlignedMemoryPool.h" />
+    <ClInclude Include="GameOfLIfe\CoordinateTypeHash.h" />
+    <ClInclude Include="GameOfLife\SubgridStorage.h">
+      <Filter>GameOfLife</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

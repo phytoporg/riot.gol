@@ -75,6 +75,10 @@ namespace
 
 namespace GameOfLife
 {
+    SubGrid::SubGrid()
+        : RectangularGrid(0, 0, 0, 0)
+    {}
+
     SubGrid::SubGrid(SubGridGraph& graph, int64_t xmin, int64_t width, int64_t ymin, int64_t height)
         : RectangularGrid(xmin, width, ymin, height),
           m_generation(0),

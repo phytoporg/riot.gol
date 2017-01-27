@@ -72,9 +72,9 @@ namespace GameOfLife
         static const WORD ColorBuffer[] = { BACKGROUND_BLUE, BACKGROUND_GREEN, BACKGROUND_RED, BACKGROUND_RED };
         int colorIndex = 0;
 
-        const auto& subgrids = state.GetSubgrids();
-        for (const auto& subgrid : subgrids)
+        for (auto it = state.begin(); it != state.end(); ++it)
         {
+            const auto& subgrid = it->second;
             const int64_t xMin = subgrid.XMin();
             const int64_t yMin = subgrid.YMin();
 

@@ -5,6 +5,7 @@
 //
 
 #include "SubGrid.h"
+#include "SubgridStorage.h"
 #include "Cell.h"
 #include "RectangularGrid.h"
 #include "SubgridGraph.h"
@@ -19,7 +20,11 @@ namespace GameOfLife
         State(const std::vector<Cell>& initialState);
 
         bool AdvanceGeneration();
-        const std::vector<SubGrid>& GetSubgrids() const; 
+
+        SubgridStorage::iterator begin() { return m_subgridStorage.begin(); }
+        SubgridStorage::iterator end()   { return m_subgridStorage.end(); }
+        SubgridStorage::const_iterator begin() const { return m_subgridStorage.begin(); }
+        SubgridStorage::const_iterator end()   const { return m_subgridStorage.end(); }
 
     private:
         State() = delete;
@@ -28,8 +33,8 @@ namespace GameOfLife
 
         void 
         PopulateAdjacencyInfo(
-            std::vector<SubGrid>::const_iterator begin,
-            std::vector<SubGrid>::const_iterator end
+            SubgridStorage::const_iterator begin,
+            SubgridStorage::const_iterator end
             );
 
         //
@@ -37,7 +42,7 @@ namespace GameOfLife
         // lookup and "shuffle" cost for deletion. Fine for now, but not great at
         // scale.
         //
-        std::vector<SubGrid> m_subgrids;
+        SubgridStorage m_subgridStorage;
 
         //
         // Subgrid adjacency info

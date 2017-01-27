@@ -1,7 +1,7 @@
 #include "SubGridGraph.h"
 #include "State.h"
 
-#include <Utility/Hash.h>
+#include "CoordinateTypeHash.h"
 
 #include <cassert>
 
@@ -24,18 +24,6 @@ namespace
     {
         GameOfLife::SubGrid* pSubGrid;
         GameOfLife::SubGrid* Neighbors[8];
-    };
-}
-
-namespace std
-{
-    template<>
-    struct hash<GameOfLife::SubGrid::CoordinateType>
-    {
-        std::size_t operator()(const GameOfLife::SubGrid::CoordinateType& coord) const
-        {
-            return Utility::hash_value(coord);
-        }
     };
 }
 

@@ -22,6 +22,7 @@ namespace GameOfLife
         static const int64_t SUBGRID_WIDTH  = 30;
         static const int64_t SUBGRID_HEIGHT = 30;
 
+        SubGrid();
         SubGrid(SubGridGraph& graph, int64_t xmin, int64_t width, int64_t ymin, int64_t height);
 
         //
