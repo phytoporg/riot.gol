@@ -8,17 +8,19 @@
 
 namespace Utility
 {
-    template <unsigned int N>
+    template <size_t N>
     class AlignedMemoryPool
     {
     public:
+        AlignedMemoryPool() = default;
+
         AlignedMemoryPool(size_t sublockSize, size_t superblockLength)
             : m_sublockSize(sublockSize),
-            : m_superblockLength(superblockLength)
+              m_superblockLength(superblockLength)
         {
             if (sublockSize % N)
             {
-                throw "Sublock size must be a multiple of alignment."
+                throw "Sublock size must be a multiple of alignment.";
             }
         }
 
@@ -69,7 +71,7 @@ namespace Utility
                     [&buffer,this](const SuperBlock& superblock)
                     {
                         return buffer.Get() >= superblock.pAligned &&
-                               buffer.Get() < superblock.pAligned + this->m_superBlockLength;
+                               buffer.Get() < superblock.pAligned + this->m_superblockLength;
                     });
             assert(superIt != m_superblocks.end());
             assert(superIt->Refcount > 0);
@@ -90,7 +92,19 @@ namespace Utility
             // What to do in OOM?
             //
             uint8_t* pSuperblock = new uint8_t[Length + (N - 1)];
-            uint8_t* pAligned = pSuperblock & ~(N - 1);
+            memset(pSuperblock, 0, Length + (N - 1));
+
+            size_t base = reinterpret_cast<size_t>(pSuperblock);
+            if (base & (N - 1))
+            {
+                base &= ~(N - 1);
+                base += N;
+            }
+
+            uint8_t* pAligned = reinterpret_cast<uint8_t*>(base);
+            assert(!(base & (N - 1)));
+            assert(pAligned >= pSuperblock);
+            assert(pSuperblock + N >= pAligned);
 
             uint8_t* pSublock = pAligned;
             for (size_t i = 0; i < m_superblockLength; ++i)
@@ -99,7 +113,7 @@ namespace Utility
                 pSublock += m_sublockSize;
             }
 
-            m_superblocks.emplace_back(pSuperblock, pAligned, 0);
+            m_superblocks.push_back({ pSuperblock, pAligned, 0 });
 
             return pAligned;
         }

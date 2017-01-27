@@ -1,37 +1,34 @@
 #pragma once
 
 //
-// RAII aligned buffer wrapper.
+// Aligned buffer wrapper. Is this even necessary??
 //
 
 namespace Utility
 {
-    template <unsigned int N> class AlignedMemoryPool;
+    template <size_t N> class AlignedMemoryPool;
 
-    template <unsigned int N>
+    template <size_t N>
     class AlignedBuffer
     {
         static_assert(N && !(N & (N - 1)), "N must be a power of two");
 
     public:
-        AlignedBuffer(uint8_t* pBuffer, const AlignedMemoryPool<N>& pool)
+        AlignedBuffer() : m_pMemoryPool(nullptr), m_pBuffer(nullptr) {}
+        AlignedBuffer(uint8_t* pBuffer, AlignedMemoryPool<N>& pool)
             : m_pBuffer(pBuffer), m_pMemoryPool(&pool)
         {
-            if (pBuffer & (N - 1))
+            if (reinterpret_cast<size_t>(pBuffer) & (N - 1))
             {
                 throw "pBuffer is not properly aligned";
             }
         }
 
-        ~AlignedBuffer()
-        {
-            m_pMemoryPool->Free(*this);
-        }
-
-        uint8_t* Get() { return m_pBuffer; }
+        uint8_t* Get()             { return m_pBuffer; }
+        uint8_t const* Get() const { return m_pBuffer; }
 
     private:
-        AlignedMemoryPool* m_pMemoryPool;
+        AlignedMemoryPool<64>* m_pMemoryPool;
         uint8_t* m_pBuffer;
     };
 }

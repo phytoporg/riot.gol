@@ -8,6 +8,9 @@
 #include "RectangularGrid.h"
 #include "AdjacencyIndex.h"
 
+#include <Utility/AlignedBuffer.h>
+#include <Utility/AlignedMemoryPool.h>
+
 #include <memory>
 
 namespace GameOfLife
@@ -23,7 +26,14 @@ namespace GameOfLife
         static const int64_t SUBGRID_HEIGHT = 30;
 
         SubGrid();
-        SubGrid(SubGridGraph& graph, int64_t xmin, int64_t width, int64_t ymin, int64_t height);
+        SubGrid(
+            Utility::AlignedMemoryPool<64>& memoryPool,
+            SubGridGraph& graph,
+            int64_t xmin,
+            int64_t width,
+            int64_t ymin,
+            int64_t height
+            );
 
         //
         // (x, y) coordinates are somewhat toroidal due to ghost buffers.
@@ -52,7 +62,9 @@ namespace GameOfLife
         // Make copies cheap by putting everything on the heap; just track
         // pointers.
         //
-        std::shared_ptr<uint8_t> m_spCellGrid[2];
+        //std::shared_ptr<uint8_t> m_spCellGrid[2];
+        Utility::AlignedMemoryPool<64>* m_pMemoryPool;
+        Utility::AlignedBuffer<64>      m_spCellGrid[2]; // TODO: rename
         uint8_t* m_pCurrentCellGrid;
 
         bool GetCellState(uint8_t const* pGrid, int64_t x, int64_t y) const;

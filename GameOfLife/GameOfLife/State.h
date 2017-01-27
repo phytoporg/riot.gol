@@ -10,6 +10,8 @@
 #include "RectangularGrid.h"
 #include "SubgridGraph.h"
 
+#include <Utility/AlignedMemoryPool.h>
+
 #include <vector>
 
 namespace GameOfLife
@@ -48,5 +50,7 @@ namespace GameOfLife
         // Subgrid adjacency info
         //
         SubGridGraph m_gridGraph;
+
+        Utility::AlignedMemoryPool<64> m_alignedPool;
     };
 }

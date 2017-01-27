@@ -56,21 +56,6 @@ namespace
 
         return neighbors;
     }
-
-    std::shared_ptr<uint8_t> CreateCellGrid(size_t width, size_t height)
-    {
-        //
-        // +2 to each dimension to allow for ghost rows/columns.
-        //
-        // TODO: ensure that this is aligned to cache-line boundaries.
-        //
-        const size_t GridLength = width * height;
-        auto spGrid = std::shared_ptr<uint8_t>(new uint8_t[GridLength], std::default_delete<uint8_t[]>());
-
-        memset(spGrid.get(), 0, GridLength);
-
-        return spGrid;
-    }
 }
 
 namespace GameOfLife
@@ -79,15 +64,18 @@ namespace GameOfLife
         : RectangularGrid(0, 0, 0, 0)
     {}
 
-    SubGrid::SubGrid(SubGridGraph& graph, int64_t xmin, int64_t width, int64_t ymin, int64_t height)
+    SubGrid::SubGrid(
+        Utility::AlignedMemoryPool<64>& memoryPool,
+        SubGridGraph& graph, 
+        int64_t xmin, int64_t width,
+        int64_t ymin, int64_t height
+        )
         : RectangularGrid(xmin, width, ymin, height),
           m_generation(0),
-          m_pGridGraph(&graph)
+          m_pGridGraph(&graph),
+          m_pMemoryPool(&memoryPool)
     {
         ValidateDimensions(m_width, m_height);
-
-        m_spCellGrid[0] = std::make_shared<uint8_t>();
-        m_spCellGrid[1] = std::make_shared<uint8_t>();
 
         //
         // +2 to make room for ghost buffers.
@@ -95,9 +83,9 @@ namespace GameOfLife
         m_bufferWidth  = m_width + 2;
         m_bufferHeight = m_height + 2;
 
-        m_spCellGrid[0] = CreateCellGrid(m_bufferWidth, m_bufferHeight);
-        m_spCellGrid[1] = CreateCellGrid(m_bufferWidth, m_bufferHeight);
-        m_pCurrentCellGrid = m_spCellGrid[0].get();
+        m_spCellGrid[0] = m_pMemoryPool->Allocate();
+        m_spCellGrid[1] = m_pMemoryPool->Allocate();
+        m_pCurrentCellGrid = m_spCellGrid[0].Get();
 
         m_coordinates = std::make_pair(m_xMin, m_yMin);
     }
@@ -211,8 +199,8 @@ namespace GameOfLife
                 pNeighborGrid =
                     OtherPointer(
                         pNeighborGrid,
-                        pNeighbor->m_spCellGrid[0].get(),
-                        pNeighbor->m_spCellGrid[1].get()
+                        pNeighbor->m_spCellGrid[0].Get(),
+                        pNeighbor->m_spCellGrid[1].Get()
                         );
             }
 
@@ -287,8 +275,8 @@ namespace GameOfLife
         uint8_t* pOtherGrid =
             OtherPointer(
                 m_pCurrentCellGrid,
-                m_spCellGrid[0].get(),
-                m_spCellGrid[1].get()
+                m_spCellGrid[0].Get(),
+                m_spCellGrid[1].Get()
                 );
 
         uint32_t numCells = 0;

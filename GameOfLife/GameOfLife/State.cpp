@@ -8,6 +8,7 @@ namespace
 {
     void 
     MaybeCreateNewNeighbors(
+        Utility::AlignedMemoryPool<64>& memoryPool,
         const GameOfLife::SubGrid& subgrid,
         const GameOfLife::RectangularGrid& stateDimensions,
         GameOfLife::SubGridGraph& gridGraph,
@@ -31,7 +32,7 @@ namespace
                 const int64_t yMax = (stateDimensions.YMin() + stateDimensions.Height()) - NeighborMinY;
 
                 subgrids.emplace_back(
-                    gridGraph,
+                    memoryPool, gridGraph,
                     NeighborMinX, std::min(SubGrid::SUBGRID_WIDTH, xMax),
                     NeighborMinY, std::min(SubGrid::SUBGRID_HEIGHT, yMax)
                     );
@@ -61,6 +62,7 @@ namespace
 namespace GameOfLife
 {
     State::State(const std::vector<Cell>& initialState)
+        : m_alignedPool((SubGrid::SUBGRID_WIDTH + 2) * (SubGrid::SUBGRID_HEIGHT + 2), 32)
     {
         assert(!initialState.empty());
         int64_t xMin = std::numeric_limits<int64_t>::max();
@@ -98,7 +100,7 @@ namespace GameOfLife
             if (!m_gridGraph.QueryVertex(std::make_pair(SubgridMinX, SubgridMinY), &pSubGrid))
             {
                 SubGrid subgrid(
-                    m_gridGraph,
+                    m_alignedPool, m_gridGraph,
                     SubgridMinX, std::min(SubGrid::SUBGRID_WIDTH, xMax - SubgridMinX + 1),
                     SubgridMinY, std::min(SubGrid::SUBGRID_HEIGHT, yMax - SubgridMinY + 1)
                     );
@@ -131,7 +133,7 @@ namespace GameOfLife
             auto& subgrid = it->second;
             const uint32_t NumCells = subgrid.AdvanceGeneration();
 
-            MaybeCreateNewNeighbors(subgrid, *this, m_gridGraph, subgridsToAdd);
+            MaybeCreateNewNeighbors(m_alignedPool, subgrid, *this, m_gridGraph, subgridsToAdd);
             MaybeRetireSubgrid(NumCells, *this, subgrid, m_gridGraph, m_subgridStorage);
         }
 
@@ -172,11 +174,11 @@ namespace GameOfLife
                         //
 
                         int64_t neighborX = SubgridCoordinates.first + dx * SubGrid::SUBGRID_WIDTH;
-                        if (neighborX > xMax)      { neighborX = m_xMin; }
+                        if (neighborX > xMax)        { neighborX = m_xMin; }
                         else if (neighborX < m_xMin) { neighborX = m_xMin + (m_width / SubGrid::SUBGRID_WIDTH) * SubGrid::SUBGRID_WIDTH; }
 
                         int64_t neighborY = SubgridCoordinates.second + dy * SubGrid::SUBGRID_HEIGHT;
-                        if (neighborY > yMax)      { neighborY = m_yMin; }
+                        if (neighborY > yMax)        { neighborY = m_yMin; }
                         else if (neighborY < m_yMin) { neighborY = m_yMin + (m_height / SubGrid::SUBGRID_HEIGHT) * SubGrid::SUBGRID_HEIGHT; }
 
                         const auto NeighborCoordinates = std::make_pair(neighborX, neighborY);
