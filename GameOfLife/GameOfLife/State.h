@@ -20,6 +20,7 @@ namespace GameOfLife
     {
     public:
         State(const std::vector<Cell>& initialState);
+        ~State();
 
         bool AdvanceGeneration();
 

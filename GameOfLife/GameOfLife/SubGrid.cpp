@@ -6,6 +6,8 @@
 
 #include <cassert>
 
+#include <iostream>
+
 namespace
 {
     void ValidateDimensions(int64_t width, int64_t height)
@@ -65,15 +67,14 @@ namespace GameOfLife
     {}
 
     SubGrid::SubGrid(
-        Utility::AlignedMemoryPool<64>& memoryPool,
+        uint8_t* ppGrids[2],
         SubGridGraph& graph, 
         int64_t xmin, int64_t width,
         int64_t ymin, int64_t height
         )
         : RectangularGrid(xmin, width, ymin, height),
           m_generation(0),
-          m_pGridGraph(&graph),
-          m_pMemoryPool(&memoryPool)
+          m_pGridGraph(&graph)
     {
         ValidateDimensions(m_width, m_height);
 
@@ -83,9 +84,9 @@ namespace GameOfLife
         m_bufferWidth  = m_width + 2;
         m_bufferHeight = m_height + 2;
 
-        m_spCellGrid[0] = m_pMemoryPool->Allocate();
-        m_spCellGrid[1] = m_pMemoryPool->Allocate();
-        m_pCurrentCellGrid = m_spCellGrid[0].Get();
+        m_pCellGrids[0] = ppGrids[0];
+        m_pCellGrids[1] = ppGrids[1];
+        m_pCurrentCellGrid = m_pCellGrids[0];
 
         m_coordinates = std::make_pair(m_xMin, m_yMin);
     }
@@ -199,8 +200,8 @@ namespace GameOfLife
                 pNeighborGrid =
                     OtherPointer(
                         pNeighborGrid,
-                        pNeighbor->m_spCellGrid[0].Get(),
-                        pNeighbor->m_spCellGrid[1].Get()
+                        pNeighbor->m_pCellGrids[0],
+                        pNeighbor->m_pCellGrids[1]
                         );
             }
 
@@ -275,8 +276,8 @@ namespace GameOfLife
         uint8_t* pOtherGrid =
             OtherPointer(
                 m_pCurrentCellGrid,
-                m_spCellGrid[0].Get(),
-                m_spCellGrid[1].Get()
+                m_pCellGrids[0],
+                m_pCellGrids[1]
                 );
 
         uint32_t numCells = 0;
@@ -302,11 +303,11 @@ namespace GameOfLife
                     if (NumNeighbors == 3)
                     {
                         RaiseCell(pOtherGrid, x, y);
+                        ++numCells;
                     }
                     else
                     {
                         KillCell(pOtherGrid, x, y);
-                        ++numCells;
                     }
                 }
             }
@@ -314,6 +315,8 @@ namespace GameOfLife
 
         ++m_generation;
         m_pCurrentCellGrid = pOtherGrid;
+
+        std::cout << numCells << std::endl;
 
         return numCells;
     }

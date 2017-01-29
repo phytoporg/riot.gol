@@ -21,41 +21,46 @@ namespace
             const auto Adjacency = static_cast<AdjacencyIndex>(i);
             if (subgrid.IsNextGenerationNeighbor(Adjacency))
             {
-                const auto NeighborSubgridPosition =
-                    SubGridGraph::GetNeighborPositionFromIndex(Adjacency);
-                const int64_t NeighborMinX =
-                    stateDimensions.XMin() + NeighborSubgridPosition.first * SubGrid::SUBGRID_WIDTH;
-                const int64_t NeighborMinY =
-                    stateDimensions.YMin() + NeighborSubgridPosition.second * SubGrid::SUBGRID_HEIGHT;
+                const int64_t xMax = stateDimensions.XMin() + stateDimensions.Width();
+                const int64_t yMax = stateDimensions.YMin() + stateDimensions.Height();
 
-                const int64_t xMax = (stateDimensions.XMin() +  stateDimensions.Width()) - NeighborMinX;
-                const int64_t yMax = (stateDimensions.YMin() + stateDimensions.Height()) - NeighborMinY;
+                const auto NeighborOffset = SubGridGraph::GetNeighborPositionFromIndex(Adjacency);
+                const int64_t dx = NeighborOffset.first;
+                const int64_t dy = NeighborOffset.second;
 
+                int64_t neighborX = subgrid.GetCoordinates().first + dx * SubGrid::SUBGRID_WIDTH;
+                if (neighborX > xMax)        { neighborX = stateDimensions.XMin(); }
+                else if (neighborX < stateDimensions.XMin()) { neighborX = stateDimensions.XMin() + (stateDimensions.Width() / SubGrid::SUBGRID_WIDTH) * SubGrid::SUBGRID_WIDTH; }
+
+                int64_t neighborY = subgrid.GetCoordinates().second + dy * SubGrid::SUBGRID_HEIGHT;
+                if (neighborY > yMax)        { neighborY = stateDimensions.Height(); }
+                else if (neighborY < stateDimensions.YMin()) { neighborY = stateDimensions.YMin() + (stateDimensions.Height() / SubGrid::SUBGRID_HEIGHT) * SubGrid::SUBGRID_HEIGHT; }
+
+                const auto NeighborCoordinates = std::make_pair(neighborX, neighborY);
+
+                const int64_t MaxWidth = (stateDimensions.XMin() +  stateDimensions.Width()) - neighborX;
+                const int64_t MaxHeight = (stateDimensions.YMin() + stateDimensions.Height()) - neighborY;
+
+                uint8_t* ppBuffers[2] = { memoryPool.Allocate(), memoryPool.Allocate() };
                 subgrids.emplace_back(
-                    memoryPool, gridGraph,
-                    NeighborMinX, std::min(SubGrid::SUBGRID_WIDTH, xMax),
-                    NeighborMinY, std::min(SubGrid::SUBGRID_HEIGHT, yMax)
+                    ppBuffers, gridGraph,
+                    neighborX, std::min(SubGrid::SUBGRID_WIDTH, MaxWidth),
+                    neighborY, std::min(SubGrid::SUBGRID_HEIGHT, MaxHeight)
                     );
             }
         }
     }
 
-    void 
-    MaybeRetireSubgrid(
+    void MaybeRetireSubgrid(
         uint32_t numCells,
-        const GameOfLife::RectangularGrid& stateDimensions,
-        const GameOfLife::SubGrid& subgrid,
-        GameOfLife::SubGridGraph& gridGraph,
-        GameOfLife::SubgridStorage& subgridStorage
+        GameOfLife::SubGrid& subgrid,
+        std::vector<GameOfLife::SubGrid>& subgrids
         )
     {
-        if (numCells)
+        if (!numCells)
         {
-            return;
+            subgrids.push_back(subgrid);
         }
-
-        gridGraph.RemoveVertex(subgrid);
-        subgridStorage.Remove(subgrid);
     }
 }
 
@@ -99,8 +104,10 @@ namespace GameOfLife
             SubGrid* pSubGrid = nullptr;
             if (!m_gridGraph.QueryVertex(std::make_pair(SubgridMinX, SubgridMinY), &pSubGrid))
             {
+                uint8_t* ppBuffers[2] = { m_alignedPool.Allocate(), m_alignedPool.Allocate() };
                 SubGrid subgrid(
-                    m_alignedPool, m_gridGraph,
+                    ppBuffers,
+                    m_gridGraph,
                     SubgridMinX, std::min(SubGrid::SUBGRID_WIDTH, xMax - SubgridMinX + 1),
                     SubgridMinY, std::min(SubGrid::SUBGRID_HEIGHT, yMax - SubgridMinY + 1)
                     );
@@ -125,16 +132,34 @@ namespace GameOfLife
         PopulateAdjacencyInfo(m_subgridStorage.begin(), m_subgridStorage.end());
     }
 
+    State::~State()
+    {
+        for (auto& subgrids : m_subgridStorage)
+        {
+            subgrids.second.Cleanup(m_alignedPool);
+        }
+    }
+
     bool State::AdvanceGeneration()
     {
         std::vector<SubGrid> subgridsToAdd;
+        std::vector<SubGrid> subgridsToRemove;
         for (auto it = m_subgridStorage.begin(); it != m_subgridStorage.end(); ++it)
         {
             auto& subgrid = it->second;
             const uint32_t NumCells = subgrid.AdvanceGeneration();
 
             MaybeCreateNewNeighbors(m_alignedPool, subgrid, *this, m_gridGraph, subgridsToAdd);
-            MaybeRetireSubgrid(NumCells, *this, subgrid, m_gridGraph, m_subgridStorage);
+            MaybeRetireSubgrid(NumCells, subgrid, subgridsToRemove);
+        }
+
+        const size_t NumRemoved = subgridsToRemove.size();
+        for (size_t i = 0; i < NumRemoved; i++)
+        {
+            auto& subgrid = subgridsToRemove[i];
+            subgrid.Cleanup(m_alignedPool);
+            m_gridGraph.RemoveVertex(subgrid);
+            m_subgridStorage.Remove(subgrid);
         }
 
         const size_t NumAdded = subgridsToAdd.size();
@@ -158,6 +183,18 @@ namespace GameOfLife
         //
         const int64_t xMax = m_xMin + m_width;
         const int64_t yMax = m_yMin + m_height;
+
+        static char* LUT[] =
+        {
+            "TOP_LEFT",
+            "TOP",
+            "TOP_RIGHT",
+            "LEFT",
+            "RIGHT",
+            "BOTTOM_LEFT",
+            "BOTTOM",
+            "BOTTOM_RIGHT"
+        };
 
         for (auto it = begin; it != end; ++it)
         {

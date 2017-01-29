@@ -8,7 +8,6 @@
 #include "RectangularGrid.h"
 #include "AdjacencyIndex.h"
 
-#include <Utility/AlignedBuffer.h>
 #include <Utility/AlignedMemoryPool.h>
 
 #include <memory>
@@ -22,18 +21,30 @@ namespace GameOfLife
     public:
         typedef std::pair<int64_t, int64_t> CoordinateType;
 
-        static const int64_t SUBGRID_WIDTH  = 30;
+        static const int64_t SUBGRID_WIDTH = 30;
         static const int64_t SUBGRID_HEIGHT = 30;
 
         SubGrid();
         SubGrid(
-            Utility::AlignedMemoryPool<64>& memoryPool,
+            uint8_t* ppGrids[2],
             SubGridGraph& graph,
             int64_t xmin,
             int64_t width,
             int64_t ymin,
             int64_t height
             );
+
+        //
+        // Free resources on removal.
+        //
+        template<size_t N>
+        void Cleanup(Utility::AlignedMemoryPool<N>& pool)
+        {
+            pool.Free(m_pCellGrids[0]);
+            m_pCellGrids[0] = nullptr;
+            pool.Free(m_pCellGrids[1]);
+            m_pCellGrids[1] = nullptr;
+        }
 
         //
         // (x, y) coordinates are somewhat toroidal due to ghost buffers.
@@ -59,12 +70,10 @@ namespace GameOfLife
 
     private:
         //
-        // Make copies cheap by putting everything on the heap; just track
-        // pointers.
+        // SubGrid objects get tossed around a lot for bookkeeping, so make 
+        // copies cheap. Place data on the heap; just track pointers in here.
         //
-        //std::shared_ptr<uint8_t> m_spCellGrid[2];
-        Utility::AlignedMemoryPool<64>* m_pMemoryPool;
-        Utility::AlignedBuffer<64>      m_spCellGrid[2]; // TODO: rename
+        uint8_t* m_pCellGrids[2];
         uint8_t* m_pCurrentCellGrid;
 
         bool GetCellState(uint8_t const* pGrid, int64_t x, int64_t y) const;
