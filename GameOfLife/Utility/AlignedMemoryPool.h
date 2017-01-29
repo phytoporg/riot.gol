@@ -93,9 +93,6 @@ namespace Utility
             m_usedBuffers.erase(usedIt);
             m_freeBuffers.push_back(pBuffer);
 
-            // 
-            // TODO: Update superblock refcount
-            //
             auto superIt = FindParentSuperblock(pBuffer);
             assert(superIt != m_superblocks.end());
             assert(superIt->Refcount > 0);

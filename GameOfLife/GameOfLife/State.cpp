@@ -6,6 +6,69 @@
 
 namespace
 {
+    GameOfLife::SubGrid::CoordinateType
+    GetNeighborCoordinates(
+        const GameOfLife::SubGrid& subgrid,
+        const GameOfLife::RectangularGrid& stateDimensions,
+        const GameOfLife::SubGrid::CoordinateType neighborDelta
+        )
+    {
+        // 
+        // State is toroidal, so account for wrapping.
+        //
+
+        const int64_t XMax = stateDimensions.XMin() + stateDimensions.Width();
+        const int64_t YMax = stateDimensions.YMin() + stateDimensions.Height();
+
+        const int64_t dx = neighborDelta.first;
+        const int64_t dy = neighborDelta.second;
+
+        int64_t neighborX = subgrid.GetCoordinates().first + dx * GameOfLife::SubGrid::SUBGRID_WIDTH;
+        if (neighborX > XMax)        
+        { 
+            neighborX = stateDimensions.XMin(); 
+        }
+        else if (neighborX < stateDimensions.XMin()) {
+            neighborX =
+                stateDimensions.XMin() +
+                (stateDimensions.Width() / GameOfLife::SubGrid::SUBGRID_WIDTH) *
+                GameOfLife::SubGrid::SUBGRID_WIDTH; 
+        }
+
+        int64_t neighborY = subgrid.GetCoordinates().second + dy * GameOfLife::SubGrid::SUBGRID_HEIGHT;
+        if (neighborY > YMax)        
+        { 
+            neighborY = stateDimensions.Height(); 
+        }
+        else if (neighborY < stateDimensions.YMin()) 
+        { 
+            neighborY = stateDimensions.YMin() + 
+                (stateDimensions.Height() / GameOfLife::SubGrid::SUBGRID_HEIGHT) *
+                GameOfLife::SubGrid::SUBGRID_HEIGHT; 
+        }
+
+        return std::make_pair(neighborX, neighborY);
+    }
+
+    GameOfLife::RectangularGrid
+    GetNeighborBounds(
+        const GameOfLife::SubGrid& subgrid,
+        const GameOfLife::RectangularGrid& stateDimensions,
+        const GameOfLife::SubGrid::CoordinateType neighborDelta
+        )
+    {
+        const auto MinCoordinates = GetNeighborCoordinates(subgrid, stateDimensions, neighborDelta);
+
+        const int64_t MaxWidth = (stateDimensions.XMin() +  stateDimensions.Width()) - MinCoordinates.first;
+        const int64_t MaxHeight = (stateDimensions.YMin() + stateDimensions.Height()) - MinCoordinates.second;
+
+        return GameOfLife::RectangularGrid(
+            MinCoordinates.first,  std::min(GameOfLife::SubGrid::SUBGRID_WIDTH, MaxWidth),
+            MinCoordinates.second, std::min(GameOfLife::SubGrid::SUBGRID_HEIGHT, MaxHeight)
+            );
+    }
+
+
     void 
     MaybeCreateNewNeighbors(
         Utility::AlignedMemoryPool<64>& memoryPool,
@@ -21,31 +84,14 @@ namespace
             const auto Adjacency = static_cast<AdjacencyIndex>(i);
             if (subgrid.IsNextGenerationNeighbor(Adjacency))
             {
-                const int64_t xMax = stateDimensions.XMin() + stateDimensions.Width();
-                const int64_t yMax = stateDimensions.YMin() + stateDimensions.Height();
-
                 const auto NeighborOffset = SubGridGraph::GetNeighborPositionFromIndex(Adjacency);
-                const int64_t dx = NeighborOffset.first;
-                const int64_t dy = NeighborOffset.second;
-
-                int64_t neighborX = subgrid.GetCoordinates().first + dx * SubGrid::SUBGRID_WIDTH;
-                if (neighborX > xMax)        { neighborX = stateDimensions.XMin(); }
-                else if (neighborX < stateDimensions.XMin()) { neighborX = stateDimensions.XMin() + (stateDimensions.Width() / SubGrid::SUBGRID_WIDTH) * SubGrid::SUBGRID_WIDTH; }
-
-                int64_t neighborY = subgrid.GetCoordinates().second + dy * SubGrid::SUBGRID_HEIGHT;
-                if (neighborY > yMax)        { neighborY = stateDimensions.Height(); }
-                else if (neighborY < stateDimensions.YMin()) { neighborY = stateDimensions.YMin() + (stateDimensions.Height() / SubGrid::SUBGRID_HEIGHT) * SubGrid::SUBGRID_HEIGHT; }
-
-                const auto NeighborCoordinates = std::make_pair(neighborX, neighborY);
-
-                const int64_t MaxWidth = (stateDimensions.XMin() +  stateDimensions.Width()) - neighborX;
-                const int64_t MaxHeight = (stateDimensions.YMin() + stateDimensions.Height()) - neighborY;
+                const auto SubgridBounds = GetNeighborBounds(subgrid, stateDimensions, NeighborOffset);
 
                 uint8_t* ppBuffers[2] = { memoryPool.Allocate(), memoryPool.Allocate() };
                 subgrids.emplace_back(
                     ppBuffers, gridGraph,
-                    neighborX, std::min(SubGrid::SUBGRID_WIDTH, MaxWidth),
-                    neighborY, std::min(SubGrid::SUBGRID_HEIGHT, MaxHeight)
+                    SubgridBounds.XMin(), SubgridBounds.Width(),
+                    SubgridBounds.YMin(), SubgridBounds.Height()
                     );
             }
         }
@@ -184,18 +230,6 @@ namespace GameOfLife
         const int64_t xMax = m_xMin + m_width;
         const int64_t yMax = m_yMin + m_height;
 
-        static char* LUT[] =
-        {
-            "TOP_LEFT",
-            "TOP",
-            "TOP_RIGHT",
-            "LEFT",
-            "RIGHT",
-            "BOTTOM_LEFT",
-            "BOTTOM",
-            "BOTTOM_RIGHT"
-        };
-
         for (auto it = begin; it != end; ++it)
         {
             const auto& subgrid = it->second;
@@ -206,19 +240,8 @@ namespace GameOfLife
                 {
                     if (dx || dy)
                     {
-                        // 
-                        // State is toroidal, so account for wrapping.
-                        //
+                        const auto NeighborCoordinates = GetNeighborCoordinates(subgrid, *this, std::make_pair(dx, dy));
 
-                        int64_t neighborX = SubgridCoordinates.first + dx * SubGrid::SUBGRID_WIDTH;
-                        if (neighborX > xMax)        { neighborX = m_xMin; }
-                        else if (neighborX < m_xMin) { neighborX = m_xMin + (m_width / SubGrid::SUBGRID_WIDTH) * SubGrid::SUBGRID_WIDTH; }
-
-                        int64_t neighborY = SubgridCoordinates.second + dy * SubGrid::SUBGRID_HEIGHT;
-                        if (neighborY > yMax)        { neighborY = m_yMin; }
-                        else if (neighborY < m_yMin) { neighborY = m_yMin + (m_height / SubGrid::SUBGRID_HEIGHT) * SubGrid::SUBGRID_HEIGHT; }
-
-                        const auto NeighborCoordinates = std::make_pair(neighborX, neighborY);
                         SubGrid* pNeighbor;
                         if (m_gridGraph.QueryVertex(NeighborCoordinates, &pNeighbor))
                         {
