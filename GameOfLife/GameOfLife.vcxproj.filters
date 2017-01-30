@@ -12,7 +12,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
     <ClCompile Include="GameOfLife\State.cpp">
       <Filter>GameOfLife</Filter>
     </ClCompile>
@@ -28,7 +27,7 @@
     <ClCompile Include="GameOfLife\Renderers\ConsoleStateRenderer.cpp">
       <Filter>GameOfLife\Renderers</Filter>
     </ClCompile>
-    <ClCompile Include="GameOfLife\Renderers\CinderMain.cpp" />
+    <ClCompile Include="CinderMain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameOfLife\Cell.h">

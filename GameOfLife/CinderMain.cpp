@@ -4,6 +4,7 @@
 #include <cinder/gl/gl.h>
 #include <cinder/app/RendererGl.h>
 
+#include <cctype>
 #include <sstream>
 
 using namespace cinder;
@@ -28,14 +29,44 @@ namespace GameOfLife
 {
     namespace Renderers
     {
+        const float CinderRenderer::DefaultFramerate(2);
+
         CinderRenderer::CinderRenderer()
-            : m_isInitialized(false)
+            : m_isInitialized(false),
+              m_takeSingleStep(false),
+              m_gameState(PAUSED)
         {}
 
         void CinderRenderer::InitializeState(const std::vector<Cell>& cells)
         {
             m_spState.reset(new State(cells));
             m_isInitialized = true;
+        }
+
+        void CinderRenderer::keyUp(cinder::app::KeyEvent e)
+        {
+            const char c = std::tolower(e.getChar());
+            if (c == 'p')
+            {
+                if (m_gameState == PAUSED)
+                {
+                    m_gameState = PLAYING;
+                    m_takeSingleStep = false;
+                }
+                else
+                {
+                    m_gameState = PAUSED;
+                }
+            }
+            else if (m_gameState == PAUSED && c == ' ')
+            {
+                m_takeSingleStep = true;
+                disableFrameRate();
+            }
+            else if (c == 'q')
+            {
+                quit();
+            }
         }
 
         void CinderRenderer::setup()
@@ -106,8 +137,14 @@ namespace GameOfLife
                 Fail(console(), "update() called without having first been initialized.");
             }
 
-            m_spState->AdvanceGeneration();
+            if (m_gameState == PAUSED && !m_takeSingleStep)
+            {
+                return;
+            }
+            m_takeSingleStep = false;
+            setFrameRate(DefaultFramerate);
 
+            m_spState->AdvanceGeneration();
             size_t i = 0;
             for (auto it = m_spState->begin(); it != m_spState->end(); ++it)
             {
@@ -209,4 +246,9 @@ namespace GameOfLife
     }
 }
 
-CINDER_APP(GameOfLife::Renderers::CinderRenderer, app::RendererGl);
+using namespace GameOfLife::Renderers;
+CINDER_APP(CinderRenderer, app::RendererGl, [](cinder::app::App::Settings* pSettings)
+{
+    pSettings->setWindowSize(640, 480);
+    pSettings->setFrameRate(CinderRenderer::DefaultFramerate);
+});

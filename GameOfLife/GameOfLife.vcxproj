@@ -19,13 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="GameOfLife\Renderers\CinderMain.cpp" />
+    <ClCompile Include="CinderMain.cpp" />
     <ClCompile Include="GameOfLife\Renderers\ConsoleStateRenderer.cpp" />
     <ClCompile Include="GameOfLife\State.cpp" />
     <ClCompile Include="GameOfLife\SubgridStorage.cpp" />
     <ClCompile Include="GameOfLife\SubGrid.cpp" />
     <ClCompile Include="GameOfLife\SubgridGraph.cpp" />
-    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameOfLife\AdjacencyIndex.h" />

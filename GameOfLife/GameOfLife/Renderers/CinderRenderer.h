@@ -16,13 +16,26 @@ namespace GameOfLife
         class CinderRenderer : public cinder::app::App
         {
         public:
+            static const float DefaultFramerate;
+
             CinderRenderer();
 
             virtual void setup() override;
             virtual void update() override;
             virtual void draw() override;
+            virtual void keyUp(cinder::app::KeyEvent e) override;
 
         private:
+            
+            enum GameState
+            {
+                PAUSED,
+                PLAYING,
+                MAX
+            };
+
+            GameState m_gameState;
+
             void InitializeState(const std::vector<Cell>& cells);
 
             cinder::CameraOrtho             m_camera;
@@ -35,6 +48,8 @@ namespace GameOfLife
 
             std::unique_ptr<State> m_spState;
             bool m_isInitialized;
+
+            bool m_takeSingleStep;
         };
     }
 }
