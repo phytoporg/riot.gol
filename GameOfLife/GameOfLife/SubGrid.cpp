@@ -77,6 +77,7 @@ namespace GameOfLife
           m_pGridGraph(&graph)
     {
         ValidateDimensions(m_width, m_height);
+        m_vertexData.reserve(SUBGRID_WIDTH * SUBGRID_HEIGHT);
 
         //
         // +2 to make room for ghost buffers.
@@ -135,6 +136,11 @@ namespace GameOfLife
     const SubGrid::CoordinateType& SubGrid::GetCoordinates() const
     {
         return m_coordinates;
+    }
+
+    const std::vector<SubGrid::VertexType>& SubGrid::GetVertexData() const
+    {
+        return m_vertexData;
     }
 
     void SubGrid::CopyRowFrom(
@@ -280,7 +286,8 @@ namespace GameOfLife
                 m_pCellGrids[1]
                 );
 
-        uint32_t numCells = 0;
+        m_vertexData.clear();
+
         for (int64_t y = m_yMin; y < m_yMin + m_height; y++)
         {
             for (int64_t x = m_xMin; x < m_xMin + m_width; x++)
@@ -295,7 +302,7 @@ namespace GameOfLife
                     else
                     {
                         RaiseCell(pOtherGrid, x, y);
-                        ++numCells;
+                        m_vertexData.emplace_back(x, y);
                     }
                 }
                 else
@@ -303,7 +310,7 @@ namespace GameOfLife
                     if (NumNeighbors == 3)
                     {
                         RaiseCell(pOtherGrid, x, y);
-                        ++numCells;
+                        m_vertexData.emplace_back(x, y);
                     }
                     else
                     {
@@ -316,9 +323,7 @@ namespace GameOfLife
         ++m_generation;
         m_pCurrentCellGrid = pOtherGrid;
 
-        std::cout << numCells << std::endl;
-
-        return numCells;
+        return static_cast<uint32_t>(m_vertexData.size());
     }
 
     bool SubGrid::IsNextGenerationNeighbor(AdjacencyIndex adjacency) const

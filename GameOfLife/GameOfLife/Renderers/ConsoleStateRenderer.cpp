@@ -2,8 +2,7 @@
 
 #include <windows.h>
 
-namespace GameOfLife
-{
+namespace GameOfLife { namespace Renderers {
     class ConsoleStateRenderer::Pimpl
     {
     public:
@@ -101,4 +100,5 @@ namespace GameOfLife
             );
         m_spPimpl->WriteCharacter(' '); // Resets the color for next round.
     }
-}
+}}
+

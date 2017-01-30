@@ -7,12 +7,12 @@
     <Filter Include="Utility">
       <UniqueIdentifier>{a5d1fcfa-7f5e-4564-ac05-a52b9feee236}</UniqueIdentifier>
     </Filter>
+    <Filter Include="GameOfLife\Renderers">
+      <UniqueIdentifier>{fa7d6cda-760d-40d7-813a-453dcecccbfd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="GameOfLife\ConsoleStateRenderer.cpp">
-      <Filter>GameOfLife</Filter>
-    </ClCompile>
     <ClCompile Include="GameOfLife\State.cpp">
       <Filter>GameOfLife</Filter>
     </ClCompile>
@@ -25,15 +25,16 @@
     <ClCompile Include="GameOfLife\SubgridStorage.cpp">
       <Filter>GameOfLife</Filter>
     </ClCompile>
+    <ClCompile Include="GameOfLife\Renderers\ConsoleStateRenderer.cpp">
+      <Filter>GameOfLife\Renderers</Filter>
+    </ClCompile>
+    <ClCompile Include="GameOfLife\Renderers\CinderMain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameOfLife\Cell.h">
       <Filter>GameOfLife</Filter>
     </ClInclude>
     <ClInclude Include="GameOfLife\State.h">
-      <Filter>GameOfLife</Filter>
-    </ClInclude>
-    <ClInclude Include="GameOfLife\ConsoleStateRenderer.h">
       <Filter>GameOfLife</Filter>
     </ClInclude>
     <ClInclude Include="GameOfLife\SubGrid.h">
@@ -51,13 +52,23 @@
     <ClInclude Include="GameOfLife\AdjacencyIndex.h">
       <Filter>GameOfLife</Filter>
     </ClInclude>
-    <ClInclude Include="Utility\AlignedBuffer.h">
-      <Filter>Utility</Filter>
-    </ClInclude>
-    <ClInclude Include="Utility\AlignedMemoryPool.h" />
-    <ClInclude Include="GameOfLIfe\CoordinateTypeHash.h" />
     <ClInclude Include="GameOfLife\SubgridStorage.h">
       <Filter>GameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="Utility\AlignedMemoryPool.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLIfe\CoordinateTypeHash.h">
+      <Filter>GameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLife\Renderers\ConsoleStateRenderer.h">
+      <Filter>GameOfLife\Renderers</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLife\Renderers\CinderRenderer.h">
+      <Filter>GameOfLife\Renderers</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLife\Renderers\CinderRenderer_Shaders.h">
+      <Filter>GameOfLife\Renderers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

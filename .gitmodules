@@ -1,0 +1,6 @@
+[submodule "GameOfLife/External/Cinder"]
+	path = GameOfLife/External/Cinder
+	url = https://github.com/cinder/Cinder.git
+[submodule "GameOfLife/External/boost"]
+	path = GameOfLife/External/boost
+	url = https://github.com/boostorg/boost.git

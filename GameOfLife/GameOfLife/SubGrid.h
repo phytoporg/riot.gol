@@ -11,6 +11,7 @@
 #include <Utility/AlignedMemoryPool.h>
 
 #include <memory>
+#include <vector>
 
 namespace GameOfLife
 {
@@ -20,6 +21,14 @@ namespace GameOfLife
     {
     public:
         typedef std::pair<int64_t, int64_t> CoordinateType;
+
+        struct VertexType
+        {
+            VertexType(int64_t x, int64_t y) :
+                X(static_cast<float>(x)), Y(static_cast<float>(y)) {}
+            float X;
+            float Y;
+        };
 
         static const int64_t SUBGRID_WIDTH = 30;
         static const int64_t SUBGRID_HEIGHT = 30;
@@ -55,6 +64,8 @@ namespace GameOfLife
         bool GetCellState(int64_t x, int64_t y) const;
 
         const CoordinateType& GetCoordinates() const;
+
+        const std::vector<VertexType>& GetVertexData() const;
          
         //
         // Returns the number of cells alive in the next generation
@@ -91,5 +102,10 @@ namespace GameOfLife
 
         int64_t m_bufferWidth;
         int64_t m_bufferHeight;
+
+        //
+        // For rendering. Only contains set cell coordinates.
+        //
+        std::vector<VertexType> m_vertexData;
     };
 }

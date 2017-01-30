@@ -72,6 +72,7 @@ namespace Utility
                 pAligned = m_freeBuffers.back();
                 superIt = FindParentSuperblock(pAligned);
             }
+            assert(!(reinterpret_cast<size_t>(pAligned) & (N - 1)));
 
             m_freeBuffers.pop_back();
             m_usedBuffers.push_back(pAligned);

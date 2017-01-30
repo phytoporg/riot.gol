@@ -1,3 +1,5 @@
+// TODO: REMOVE
+#if 0
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -5,7 +7,9 @@
 #include <cctype> // tolower
 
 #include "GameOfLife/Cell.h"
-#include "GameOfLife/ConsoleStateRenderer.h"
+#include "GameOfLife/Renderers/ConsoleStateRenderer.h"
+
+#include "GameOfLife/Renderers/CinderRenderer.h"
 
 void PrintUsage(const std::string& programName)
 {
@@ -46,10 +50,12 @@ int main(int argc, char** argv)
 
     GameOfLife::State state(cells);
 
+    GameOfLife::Renderers::CinderRenderer crender;
+
     //
     // I expect a ctrl+c, yo. TODO: handle that sigint
     //
-    GameOfLife::ConsoleStateRenderer renderer;
+    GameOfLife::Renderers::ConsoleStateRenderer renderer;
     do
     {
         renderer.Draw(state);
@@ -63,3 +69,4 @@ int main(int argc, char** argv)
 
     return 0;
 }
+#endif
