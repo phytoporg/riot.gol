@@ -153,7 +153,6 @@ namespace GameOfLife
                 {
                     std::vector<gl::VboMesh::Layout> layouts =
                     {
-                        // gl::VboMesh::Layout().usage(GL_DYNAMIC_DRAW).attrib(geom::Attrib::POSITION, 2)
                          gl::VboMesh::Layout().usage(GL_DYNAMIC_DRAW).attrib(geom::Attrib::POSITION, 2)
                     };
 
@@ -161,11 +160,6 @@ namespace GameOfLife
                     m_meshes.push_back(
                         gl::VboMesh::create(VertexCountPerSubgrid, GL_POINTS, layouts)
                         );
-                    /*
-                    m_meshes.push_back(
-                       gl::VboMesh::create(cinder::geom::Sphere())
-                     );
-                     */
                     m_meshVertexCounts.push_back(subgrid.GetVertexData().size());
                 }
                 else
@@ -206,9 +200,6 @@ namespace GameOfLife
             gl::clear(Color(0.0f, 0.0f, 0.0f));
             gl::setMatrices(m_camera);
 
-            //
-            // TODO: Set vertex transformation matrix which doesn't exist yet :O
-            //
             const float InvW = 1.0f / static_cast<float>(m_spState->Width());
             const float XMinInvW = InvW * static_cast<float>(m_spState->XMin());
             const float InvH = 1.0f / static_cast<float>(m_spState->Height());

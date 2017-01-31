@@ -50,5 +50,4 @@ const char* FRAGMENT_SHADER = CI_GLSL(150,
     void main(void)
     {
         oColor = uColor;
-        //oColor = vec4(1.0, 1.0, 1.0, 1.0);
     });
