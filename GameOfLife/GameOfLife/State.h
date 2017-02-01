@@ -24,6 +24,8 @@ namespace GameOfLife
 
         bool AdvanceGeneration();
 
+        uint32_t GetGeneration() const { return m_generationCount; }
+
         SubgridStorage::iterator begin() { return m_subgridStorage.begin(); }
         SubgridStorage::iterator end()   { return m_subgridStorage.end(); }
         SubgridStorage::const_iterator begin() const { return m_subgridStorage.begin(); }
@@ -53,5 +55,6 @@ namespace GameOfLife
         SubGridGraph m_gridGraph;
 
         Utility::AlignedMemoryPool<64> m_alignedPool;
+        uint32_t m_generationCount;
     };
 }

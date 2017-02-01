@@ -28,6 +28,9 @@
       <Filter>GameOfLife\Renderers</Filter>
     </ClCompile>
     <ClCompile Include="CinderMain.cpp" />
+    <ClCompile Include="GameOfLife\AdjacencyIndex.cpp">
+      <Filter>GameOfLife</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameOfLife\Cell.h">

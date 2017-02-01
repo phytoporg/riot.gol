@@ -37,10 +37,9 @@ namespace GameOfLife
         SubGrid(
             uint8_t* ppGrids[2],
             SubGridGraph& graph,
-            int64_t xmin,
-            int64_t width,
-            int64_t ymin,
-            int64_t height
+            int64_t xmin, int64_t width,
+            int64_t ymin, int64_t height,
+            uint32_t generation = 0
             );
 
         //
@@ -62,22 +61,26 @@ namespace GameOfLife
         void KillCell(int64_t x, int64_t y);
 
         bool GetCellState(int64_t x, int64_t y) const;
-
         const CoordinateType& GetCoordinates() const;
-
         const std::vector<VertexType>& GetVertexData() const;
          
         //
         // Returns the number of cells alive in the next generation
         //
         uint32_t AdvanceGeneration();
-        uint64_t GetGeneration() const { return m_generation; }
+        uint32_t GetGeneration() const { return m_generation; }
 
         //
         // Determines if the next generation will impact cells in a neighbor
         // which does not yet exist.
         //
         bool IsNextGenerationNeighbor(AdjacencyIndex adjacency) const;
+
+        //
+        // Copies border cells of a neighbor according to its adjacency.
+        //
+        void CopyBorder(const SubGrid& other, AdjacencyIndex adjacency);
+        void ClearBorder(AdjacencyIndex adjacency);
 
     private:
         //
@@ -92,12 +95,14 @@ namespace GameOfLife
         void KillCell(uint8_t* pGrid, int64_t x, int64_t y);
 
         void CopyRowFrom(const SubGrid& other, uint8_t const* pOtherBuffer, int64_t ySrc, int64_t yDst);
+        void ClearRow(uint8_t* pBuffer, int64_t row);
         void CopyColumnFrom(const SubGrid& other, uint8_t const* pOtherBuffer, int64_t xSrc, int64_t xDst);
+        void ClearColumn(uint8_t* pBuffer, int64_t col);
 
         size_t GetOffset(int64_t x, int64_t y) const;
 
         CoordinateType m_coordinates;
-        uint64_t       m_generation;
+        uint32_t       m_generation;
         SubGridGraph*  m_pGridGraph;
 
         int64_t m_bufferWidth;

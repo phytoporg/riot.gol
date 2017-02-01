@@ -14,4 +14,6 @@ namespace GameOfLife
         BOTTOM_RIGHT,
         MAX
     };
+
+    AdjacencyIndex GetReflectedAdjacencyIndex(AdjacencyIndex index);
 }

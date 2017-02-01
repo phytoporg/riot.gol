@@ -114,7 +114,7 @@ namespace GameOfLife
         return true;
     }
 
-    bool SubGridGraph::RemoveVertex(const SubGrid& subgrid)
+    bool SubGridGraph::RemoveVertex(SubGrid& subgrid)
     {
         const auto Coords = subgrid.GetCoordinates();
 
@@ -129,11 +129,14 @@ namespace GameOfLife
             auto& pNeighbor = it->second.Neighbors[i];
             if (pNeighbor)
             {
-                const AdjacencyIndex Reflectedindex =
+                const AdjacencyIndex ReflectedIndex =
                     GetReflectedAdjacencyIndex(static_cast<AdjacencyIndex>(i));
+
+                pNeighbor->ClearBorder(ReflectedIndex);
+                subgrid.ClearBorder(static_cast<AdjacencyIndex>(i));
                 
                 const auto& NeighborCoords = pNeighbor->GetCoordinates();
-                auto& pNeighborNeighbor = m_spPimpl->VertexLookup[NeighborCoords].Neighbors[Reflectedindex];
+                auto& pNeighborNeighbor = m_spPimpl->VertexLookup[NeighborCoords].Neighbors[ReflectedIndex];
 
                 //
                 // Asymmetry in the graph. Shouldn't happen.

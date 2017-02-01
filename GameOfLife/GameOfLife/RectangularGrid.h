@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <cstdint>
 
 namespace GameOfLife
@@ -13,7 +14,8 @@ namespace GameOfLife
             int64_t width,
             int64_t yMin,
             int64_t height
-            ) : m_xMin(xMin), m_width(width), m_yMin(yMin), m_height(height) {}
+            ) : m_xMin(xMin), m_width(width), m_yMin(yMin), m_height(height) 
+        {}
 
         int64_t XMin() const   { return m_xMin;   }
         int64_t Width() const  { return m_width;  }

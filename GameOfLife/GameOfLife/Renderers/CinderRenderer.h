@@ -37,6 +37,7 @@ namespace GameOfLife
             GameState m_gameState;
 
             void InitializeState(const std::vector<Cell>& cells);
+            void UpdateState();
 
             cinder::CameraOrtho             m_camera;
 

@@ -7,6 +7,8 @@
 #include <cctype>
 #include <sstream>
 
+#include <windows.h>
+
 using namespace cinder;
 
 namespace
@@ -41,6 +43,53 @@ namespace GameOfLife
         {
             m_spState.reset(new State(cells));
             m_isInitialized = true;
+        }
+
+        void CinderRenderer::UpdateState()
+        {
+            size_t i = 0;
+            for (auto it = m_spState->begin(); it != m_spState->end(); ++it)
+            {
+                auto& subgrid = it->second;
+                if (i >= m_meshes.size())
+                {
+                    std::vector<gl::VboMesh::Layout> layouts =
+                    {
+                         gl::VboMesh::Layout().usage(GL_DYNAMIC_DRAW).attrib(geom::Attrib::POSITION, 2)
+                    };
+
+                    static const size_t VertexCountPerSubgrid = SubGrid::SUBGRID_WIDTH * SubGrid::SUBGRID_HEIGHT;
+                    m_meshes.push_back(
+                        gl::VboMesh::create(VertexCountPerSubgrid, GL_POINTS, layouts)
+                        );
+                    m_meshVertexCounts.push_back(subgrid.GetVertexData().size());
+                }
+                else
+                {
+                    m_meshVertexCounts[i] = subgrid.GetVertexData().size();
+                }
+
+                auto& meshRef = m_meshes[i];
+                auto vboRefs = meshRef->getVertexArrayVbos();
+                assert(vboRefs.size() == 1);
+
+                static_assert(sizeof(SubGrid::VertexType) == sizeof(glm::fvec2), "NOPE");
+
+                auto vboRef = vboRefs.back();
+                vboRef->bind();
+                vboRef->bufferSubData(
+                    0,
+                    sizeof(SubGrid::VertexType) * m_meshVertexCounts[i],
+                    subgrid.GetVertexData().data()
+                    );
+                vboRef->unbind();
+
+                meshRef->updateNumVertices(m_meshVertexCounts[i]);
+
+                ++i;
+            }
+
+            m_meshesToDraw = i;
         }
 
         void CinderRenderer::keyUp(cinder::app::KeyEvent e)
@@ -119,8 +168,6 @@ namespace GameOfLife
             //
             // Center on the middle of the state grid.
             //
-            const float MidWidth  = m_spState->Width() * 0.5f;
-            const float MidHeight = m_spState->Height() * 0.5f;
             m_camera.lookAt(vec3(0, 0, 2.0f), vec3(0));
 
             m_progRef = gl::GlslProg::create(gl::GlslProg::Format()
@@ -128,6 +175,8 @@ namespace GameOfLife
                 .geometry(GEOMETRY_SHADER)
                 .fragment(FRAGMENT_SHADER)
                 );
+
+            UpdateState();
         }
 
         void CinderRenderer::update()
@@ -145,49 +194,7 @@ namespace GameOfLife
             setFrameRate(DefaultFramerate);
 
             m_spState->AdvanceGeneration();
-            size_t i = 0;
-            for (auto it = m_spState->begin(); it != m_spState->end(); ++it)
-            {
-                auto& subgrid = it->second;
-                if (i >= m_meshes.size())
-                {
-                    std::vector<gl::VboMesh::Layout> layouts =
-                    {
-                         gl::VboMesh::Layout().usage(GL_DYNAMIC_DRAW).attrib(geom::Attrib::POSITION, 2)
-                    };
-
-                    static const size_t VertexCountPerSubgrid = SubGrid::SUBGRID_WIDTH * SubGrid::SUBGRID_HEIGHT;
-                    m_meshes.push_back(
-                        gl::VboMesh::create(VertexCountPerSubgrid, GL_POINTS, layouts)
-                        );
-                    m_meshVertexCounts.push_back(subgrid.GetVertexData().size());
-                }
-                else
-                {
-                    m_meshVertexCounts[i] = subgrid.GetVertexData().size();
-                }
-
-                auto& meshRef = m_meshes[i];
-                auto vboRefs = meshRef->getVertexArrayVbos();
-                assert(vboRefs.size() == 1);
-
-                static_assert(sizeof(SubGrid::VertexType) == sizeof(glm::fvec2), "NOPE");
-
-                auto vboRef = vboRefs.back();
-                vboRef->bind();
-                vboRef->bufferSubData(
-                    0,
-                    sizeof(SubGrid::VertexType) * m_meshVertexCounts[i],
-                    subgrid.GetVertexData().data()
-                    );
-                vboRef->unbind();
-
-                meshRef->updateNumVertices(m_meshVertexCounts[i]);
-
-                ++i;
-            }
-
-            m_meshesToDraw = i;
+            UpdateState();
         }
         
         void CinderRenderer::draw()
@@ -213,18 +220,26 @@ namespace GameOfLife
             const glm::mat3 StateTransform(
                 InvW,       0,        0,
                 0,          InvH,     0,
-                -XMinInvW, -YMinInvH, 0 // Zero here to annihilate the z-component
-                );
+                -XMinInvW, -YMinInvH, 0 // Zero here to annihilate the z-component;
+                );                      // all geometry lives on the x-y plane.
 
             gl::setMatrices(m_camera);
 
-            static const float CELL_WIDTH  = InvW;
-            static const float CELL_HEIGHT = InvH;
-            ColorAf color(CM_RGB, 1.0f, 0.0f, 0.0f, 1.0f);
+            static const float CELL_WIDTH  = std::max(InvW, 0.01f) * getWindowAspectRatio();
+            static const float CELL_HEIGHT = std::max(InvH, 0.01f);
+
+            ColorAf colors[] = 
+            {
+                {CM_RGB, 1.0f, 0.0f, 0.0f, 1.0f},
+                {CM_RGB, 0.0f, 1.0f, 0.0f, 1.0f},
+                {CM_RGB, 0.0f, 0.0f, 1.0f, 1.0f}
+            };
+
+            //ColorAf color(CM_RGB, 1.0f, 0.0f, 0.0f, 1.0f);
             for (size_t i = 0; i < m_meshesToDraw; i++)
             {
                 m_progRef->uniform("uStateTransform", StateTransform);
-                m_progRef->uniform("uColor", color);
+                m_progRef->uniform("uColor", colors[i % ARRAYSIZE(colors)]);
 
                 m_progRef->uniform("CELL_WIDTH", CELL_WIDTH);
                 m_progRef->uniform("CELL_HEIGHT", CELL_HEIGHT);
@@ -235,6 +250,7 @@ namespace GameOfLife
             }
         }
     }
+
 }
 
 using namespace GameOfLife::Renderers;

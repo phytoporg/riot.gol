@@ -27,12 +27,20 @@ namespace GameOfLife
         bool GetNeighborArray(const SubGrid& subgrid, SubGrid**& ppNeighbors) const;
 
         bool AddVertex(const SubGrid& subgrid);
-        bool RemoveVertex(const SubGrid& subgrid);
+
+        //
+        // Also clears appropriate subgrid borders.
+        //
+        bool RemoveVertex(SubGrid& subgrid);
         bool QueryVertex(
             const SubGrid::CoordinateType& coord,
             SubGrid** ppSubGrid
             ) const;
 
+        //
+        // Note that here we do not initialize subgrid borders, since it's
+        // unclear which subgrid is new and the graph is bidirectional.
+        //
         bool AddEdge(
             const SubGrid& subgrid1,
             const SubGrid& subgrid2,
