@@ -162,7 +162,6 @@ namespace GameOfLife
             gl::enableDepthRead();
             gl::enableDepthWrite();
 
-            //m_camera.setPerspective(45.0f, getWindowAspectRatio(), 0.1f, 1000.0f);
             m_camera.setOrtho(0, 1.0f, 1.0f, 0.0f, 0.1f, 1000.0f);
 
             //
@@ -228,21 +227,15 @@ namespace GameOfLife
             static const float CELL_WIDTH  = std::max(InvW, 0.01f) * getWindowAspectRatio();
             static const float CELL_HEIGHT = std::max(InvH, 0.01f);
 
-            ColorAf colors[] = 
-            {
-                {CM_RGB, 1.0f, 0.0f, 0.0f, 1.0f},
-                {CM_RGB, 0.0f, 1.0f, 0.0f, 1.0f},
-                {CM_RGB, 0.0f, 0.0f, 1.0f, 1.0f}
-            };
-
-            //ColorAf color(CM_RGB, 1.0f, 0.0f, 0.0f, 1.0f);
+            const float ElapsedTime = static_cast<float>(ci::app::getElapsedSeconds());
+            const glm::vec2 Resolution(getWindowWidth(), getWindowHeight());
             for (size_t i = 0; i < m_meshesToDraw; i++)
             {
                 m_progRef->uniform("uStateTransform", StateTransform);
-                m_progRef->uniform("uColor", colors[i % ARRAYSIZE(colors)]);
-
-                m_progRef->uniform("CELL_WIDTH", CELL_WIDTH);
-                m_progRef->uniform("CELL_HEIGHT", CELL_HEIGHT);
+                m_progRef->uniform("uElapsedTime", ElapsedTime);
+                m_progRef->uniform("uWindowRes", Resolution);
+                m_progRef->uniform("uCellWidth", CELL_WIDTH);
+                m_progRef->uniform("uCellHeight", CELL_HEIGHT);
                 ci::gl::BatchRef batch = gl::Batch::create(
                     m_meshes[i], m_progRef
                     );
@@ -258,4 +251,5 @@ CINDER_APP(CinderRenderer, app::RendererGl, [](cinder::app::App::Settings* pSett
 {
     pSettings->setWindowSize(640, 480);
     pSettings->setFrameRate(CinderRenderer::DefaultFramerate);
+    pSettings->setHighDensityDisplayEnabled();
 });

@@ -12,8 +12,8 @@ const char* VERTEX_SHADER = CI_GLSL(150,
     });                                        
 
 const char* GEOMETRY_SHADER  = CI_GLSL(150,
-    uniform float CELL_WIDTH;
-    uniform float CELL_HEIGHT;
+    uniform float uCellWidth;
+    uniform float uCellHeight;
 
     layout(points) in;
     layout(triangle_strip, max_vertices = 5) out;
@@ -25,15 +25,15 @@ const char* GEOMETRY_SHADER  = CI_GLSL(150,
         gl_Position = gl_in[0].gl_Position;
         EmitVertex();
 
-        vec4 offset = vec4(CELL_WIDTH, 0.0, 0.0, 0.0);
+        vec4 offset = vec4(uCellWidth, 0.0, 0.0, 0.0);
         gl_Position = gl_in[0].gl_Position + offset;
         EmitVertex();
 
-        offset = vec4(CELL_WIDTH, CELL_HEIGHT, 0.0, 0.0);
+        offset = vec4(uCellWidth, uCellHeight, 0.0, 0.0);
         gl_Position = gl_in[0].gl_Position + offset;
         EmitVertex();
 
-        offset = vec4(0.0, CELL_HEIGHT, 0.0, 0.0);
+        offset = vec4(0.0, uCellHeight, 0.0, 0.0);
         gl_Position = gl_in[0].gl_Position + offset;
         EmitVertex();
 
@@ -44,10 +44,13 @@ const char* GEOMETRY_SHADER  = CI_GLSL(150,
     });
 
 const char* FRAGMENT_SHADER = CI_GLSL(150,
-    uniform vec4 uColor;
     out vec4 oColor;
+
+    uniform vec2  uWindowRes;
+    uniform float uElapsedTime;
 
     void main(void)
     {
-        oColor = uColor;
+        vec2 uv = gl_FragCoord.xy / uWindowRes;
+        oColor = vec4(uv, 0.5 + 0.5 * sin(uElapsedTime), 1.0);
     });
