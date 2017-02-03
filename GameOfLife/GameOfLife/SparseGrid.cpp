@@ -171,6 +171,7 @@ namespace GameOfLife
 
         m_xMin   = xMin;
         m_width  = std::max(xMax - xMin + 1, SubGrid::SUBGRID_WIDTH);
+
         m_yMin   = yMin;
         m_height = std::max(yMax - yMin + 1, SubGrid::SUBGRID_HEIGHT);
 

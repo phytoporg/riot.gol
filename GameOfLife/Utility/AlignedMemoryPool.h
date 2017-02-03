@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <list>
 #include <vector>
 
 namespace Utility
@@ -40,8 +41,8 @@ namespace Utility
 
         AlignedMemoryPool(size_t sublockSize, size_t superblockLength)
             : m_sublockSize(sublockSize),
-              m_superblockLength(superblockLength),
-              m_length(m_sublockSize * m_superblockLength)
+              m_sublocksPerSuperblock(superblockLength),
+              m_length(m_sublockSize * m_sublocksPerSuperblock)
         {
             if (sublockSize % N)
             {
@@ -53,7 +54,6 @@ namespace Utility
         {
             for (auto& superblock : m_superblocks)
             {
-                assert(!superblock.Refcount);
                 delete[] superblock.pBase;
             }
         }
@@ -76,6 +76,7 @@ namespace Utility
 
             m_freeBuffers.pop_back();
             m_usedBuffers.push_back(pAligned);
+            assert(superIt != m_superblocks.end());
             superIt->Refcount++;
 
             memset(pAligned, 0, m_sublockSize);
@@ -101,6 +102,20 @@ namespace Utility
             superIt->Refcount--;
             if (!superIt->Refcount && m_superblocks.size() > 1)
             {
+                auto it = m_freeBuffers.begin();
+                while (it != m_freeBuffers.end())
+                {
+                    auto prev = it;
+                    if (*it >= superIt->pAligned && *it <= superIt->pAligned + m_length)
+                    {
+                        ++it;
+                        m_freeBuffers.erase(prev);
+                    }
+                    else
+                    {
+                        ++it;
+                    }
+                }
                 m_superblocks.erase(superIt);
             }
         }
@@ -140,7 +155,7 @@ namespace Utility
             assert(pSuperblock + N >= pAligned);
 
             uint8_t* pSublock = pAligned;
-            for (size_t i = 0; i < m_superblockLength; ++i)
+            for (size_t i = 0; i < m_sublocksPerSuperblock; ++i)
             {
                 m_freeBuffers.push_back(pSublock);
                 pSublock += m_sublockSize;
@@ -148,18 +163,15 @@ namespace Utility
 
             m_superblocks.push_back({ pSuperblock, pAligned, 0 });
 
-            //
-            // I know this seems redundant, but all it takes is a clumsy refactoring...
-            //
             assert(!m_superblocks.empty());
             return m_superblocks.end() - 1;
         }
 
-        std::vector<uint8_t*> m_freeBuffers;
-        std::vector<uint8_t*> m_usedBuffers;
+        std::list<uint8_t*> m_freeBuffers;
+        std::list<uint8_t*> m_usedBuffers;
 
         size_t m_sublockSize;
-        size_t m_superblockLength;;
+        size_t m_sublocksPerSuperblock;;
         size_t m_length;
     };
 }

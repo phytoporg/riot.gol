@@ -203,20 +203,30 @@ namespace GameOfLife
 
     bool SubGrid::HasBorderCells() const
     {
-        assert(!(m_bufferWidth & 0x4));
-        assert(!(m_bufferHeight & 0x4));
-
         typedef int64_t SkipPtrType;
 
         //
         // Check top row first
         //
         uint8_t* pTemp = &m_pCurrentCellGrid[GetOffset(m_xMin - 1, m_yMin - 1)];
-        for (int64_t i = 0; i < m_bufferWidth / sizeof(SkipPtrType); i++)
+        uint64_t i = 0;
+        for (i = 0; i < m_bufferWidth / sizeof(SkipPtrType); i++)
         {
             auto pSkipTemp = reinterpret_cast<SkipPtrType*>(pTemp);
             if (*pSkipTemp) return true;
             pTemp += sizeof(SkipPtrType);
+        }
+
+        if (i * sizeof(SkipPtrType) < m_bufferWidth)
+        {
+            const uint64_t Remaining = m_bufferWidth % sizeof(SkipPtrType);
+            for (i = 0; i < Remaining; i++)
+            {
+                if (*(++pTemp))
+                {
+                    return true;
+                }
+            }
         }
 
         //
@@ -229,6 +239,19 @@ namespace GameOfLife
             if (*pSkipTemp) return true;
             pTemp += sizeof(SkipPtrType);
         }
+
+        if (i * sizeof(SkipPtrType) < m_bufferHeight)
+        {
+            const uint64_t Remaining = m_bufferHeight % sizeof(SkipPtrType);
+            for (i = 0; i < Remaining; i++)
+            {
+                if (*(++pTemp))
+                {
+                    return true;
+                }
+            }
+        }
+
 
         //
         // Left
@@ -410,8 +433,8 @@ namespace GameOfLife
 
                 pStart++;
             }
-            return !!m_pCurrentCellGrid[GetOffset(BufferLeftX,  BufferBottomY)] ||
-                   !!m_pCurrentCellGrid[GetOffset(BufferRightX, BufferBottomY)];
+            //return !!m_pCurrentCellGrid[GetOffset(BufferLeftX,  BufferBottomY)] ||
+            //       !!m_pCurrentCellGrid[GetOffset(BufferRightX, BufferBottomY)];
         }
             break;
 
@@ -654,36 +677,36 @@ namespace GameOfLife
         switch (adjacency)
         {
         case AdjacencyIndex::TOP_LEFT:
-            m_pCurrentCellGrid[GetOffset(m_xMin - 1, m_yMin - 1)] = 0;
-            pOtherGrid[GetOffset(m_xMin - 1, m_yMin - 1)] = 0;
+            m_pCellGrids[0][GetOffset(m_xMin - 1, m_yMin - 1)] = 0;
+            m_pCellGrids[1][GetOffset(m_xMin - 1, m_yMin - 1)] = 0;
             break;
         case AdjacencyIndex::TOP:
-            ClearRow(m_pCurrentCellGrid, m_yMin - 1);
-            ClearRow(pOtherGrid, m_yMin - 1);
+            ClearRow(m_pCellGrids[0], m_yMin - 1);
+            ClearRow(m_pCellGrids[1], m_yMin - 1);
             break;
         case AdjacencyIndex::TOP_RIGHT:
-            m_pCurrentCellGrid[GetOffset(m_xMin + m_width, m_yMin - 1)] = 0;
-            pOtherGrid[GetOffset(m_xMin + m_width, m_yMin - 1)] = 0;
+            m_pCellGrids[0][GetOffset(m_xMin + m_width, m_yMin - 1)] = 0;
+            m_pCellGrids[1][GetOffset(m_xMin + m_width, m_yMin - 1)] = 0;
             break;
         case AdjacencyIndex::LEFT:
-            ClearColumn(m_pCurrentCellGrid, m_xMin - 1);
-            ClearColumn(pOtherGrid, m_xMin - 1);
+            ClearColumn(m_pCellGrids[0], m_xMin - 1);
+            ClearColumn(m_pCellGrids[1], m_xMin - 1);
             break;
         case AdjacencyIndex::RIGHT:
-            ClearColumn(m_pCurrentCellGrid, m_xMin + m_width);
-            ClearColumn(pOtherGrid, m_xMin + m_width);
+            ClearColumn(m_pCellGrids[0], m_xMin + m_width);
+            ClearColumn(m_pCellGrids[1], m_xMin + m_width);
             break;
         case AdjacencyIndex::BOTTOM_LEFT:
-            m_pCurrentCellGrid[GetOffset(m_xMin - 1, m_yMin + m_height)] = 0;
-            pOtherGrid[GetOffset(m_xMin - 1, m_yMin + m_height)] = 0;
+            m_pCellGrids[0][GetOffset(m_xMin - 1, m_yMin + m_height)] = 0;
+            m_pCellGrids[1][GetOffset(m_xMin - 1, m_yMin + m_height)] = 0;
             break;
         case AdjacencyIndex::BOTTOM:
-            ClearRow(m_pCurrentCellGrid, m_yMin + m_height);
-            ClearRow(pOtherGrid, m_yMin + m_height);
+            ClearRow(m_pCellGrids[0], m_yMin + m_height);
+            ClearRow(m_pCellGrids[1], m_yMin + m_height);
             break;
         case AdjacencyIndex::BOTTOM_RIGHT:
-            m_pCurrentCellGrid[GetOffset(m_xMin + m_width, m_yMin + m_height)] = 0;
-            pOtherGrid[GetOffset(m_xMin + m_width, m_yMin + m_height)] = 0;
+            m_pCellGrids[0][GetOffset(m_xMin + m_width, m_yMin + m_height)] = 0;
+            m_pCellGrids[1][GetOffset(m_xMin + m_width, m_yMin + m_height)] = 0;
             break;
         default:
             assert(false);
