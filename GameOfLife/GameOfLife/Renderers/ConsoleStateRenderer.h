@@ -5,7 +5,7 @@
 // just for preliminary validation.
 // 
 
-#include <GameOfLife/State.h>
+#include <GameOfLife/SparseGrid.h>
 
 #include <memory>
 
@@ -19,7 +19,7 @@ namespace GameOfLife
             ConsoleStateRenderer();
             ~ConsoleStateRenderer();
 
-            void Draw(const State& state);
+            void Draw(const SparseGrid& state);
 
         private:
             ConsoleStateRenderer(const ConsoleStateRenderer& other) = delete;

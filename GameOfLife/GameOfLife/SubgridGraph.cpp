@@ -1,5 +1,5 @@
 #include "SubGridGraph.h"
-#include "State.h"
+#include "SparseGrid.h"
 
 #include "CoordinateTypeHash.h"
 
@@ -98,7 +98,7 @@ namespace GameOfLife
             std::make_pair<int64_t, int64_t>( 1,  1)  // BOTTOM_RIGHT
         };
 
-        assert(index > 0 && index < AdjacencyIndex::MAX);
+        assert(index >= 0 && index < AdjacencyIndex::MAX);
         return LUT[index];
     }
 

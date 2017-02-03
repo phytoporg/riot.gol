@@ -63,6 +63,8 @@ namespace GameOfLife
         bool GetCellState(int64_t x, int64_t y) const;
         const CoordinateType& GetCoordinates() const;
         const std::vector<VertexType>& GetVertexData() const;
+
+        bool HasBorderCells() const;
          
         //
         // Returns the number of cells alive in the next generation
@@ -80,6 +82,7 @@ namespace GameOfLife
         // Copies border cells of a neighbor according to its adjacency.
         //
         void CopyBorder(const SubGrid& other, AdjacencyIndex adjacency);
+        void PublishBorder(SubGrid& other, AdjacencyIndex adjacency);
         void ClearBorder(AdjacencyIndex adjacency);
 
     private:
@@ -94,9 +97,17 @@ namespace GameOfLife
         void RaiseCell(uint8_t* pGrid, int64_t x, int64_t y);
         void KillCell(uint8_t* pGrid, int64_t x, int64_t y);
 
-        void CopyRowFrom(const SubGrid& other, uint8_t const* pOtherBuffer, int64_t ySrc, int64_t yDst);
+        static void CopyRowFrom(
+            const SubGrid& src, uint8_t const* pSrcGrid,
+            const SubGrid& dst, uint8_t* pDstGrid,
+            int64_t ySrc, int64_t yDst
+        );
         void ClearRow(uint8_t* pBuffer, int64_t row);
-        void CopyColumnFrom(const SubGrid& other, uint8_t const* pOtherBuffer, int64_t xSrc, int64_t xDst);
+        static void CopyColumnFrom(
+            const SubGrid& src, uint8_t const* pSrcGrid,
+            const SubGrid& dst, uint8_t* pDstGrid,
+            int64_t xSrc, int64_t xDst
+        );
         void ClearColumn(uint8_t* pBuffer, int64_t col);
 
         size_t GetOffset(int64_t x, int64_t y) const;

@@ -21,8 +21,9 @@
   <ItemGroup>
     <ClCompile Include="CinderMain.cpp" />
     <ClCompile Include="GameOfLife\AdjacencyIndex.cpp" />
+    <ClCompile Include="GameOfLife\DebugGridDumper.cpp" />
     <ClCompile Include="GameOfLife\Renderers\ConsoleStateRenderer.cpp" />
-    <ClCompile Include="GameOfLife\State.cpp" />
+    <ClCompile Include="GameOfLife\SparseGrid.cpp" />
     <ClCompile Include="GameOfLife\SubgridStorage.cpp" />
     <ClCompile Include="GameOfLife\SubGrid.cpp" />
     <ClCompile Include="GameOfLife\SubgridGraph.cpp" />
@@ -31,11 +32,12 @@
     <ClInclude Include="GameOfLife\AdjacencyIndex.h" />
     <ClInclude Include="GameOfLife\Cell.h" />
     <ClInclude Include="GameOfLIfe\CoordinateTypeHash.h" />
+    <ClInclude Include="GameOfLife\DebugGridDumper.h" />
     <ClInclude Include="GameOfLife\RectangularGrid.h" />
     <ClInclude Include="GameOfLife\Renderers\CinderRenderer.h" />
     <ClInclude Include="GameOfLife\Renderers\CinderRenderer_Shaders.h" />
     <ClInclude Include="GameOfLife\Renderers\ConsoleStateRenderer.h" />
-    <ClInclude Include="GameOfLife\State.h" />
+    <ClInclude Include="GameOfLife\SparseGrid.h" />
     <ClInclude Include="GameOfLife\SubgridStorage.h" />
     <ClInclude Include="GameOfLife\SubGrid.h" />
     <ClInclude Include="GameOfLife\SubgridGraph.h" />
@@ -98,8 +100,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\External\Cinder\include;$(ProjectDir)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -108,9 +109,10 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>External\boost\libs\accumulators\include;External\boost\libs\algorithm\include;External\boost\libs\align\include;External\boost\libs\any\include;External\boost\libs\array\include;External\boost\libs\asio\include;External\boost\libs\assert\include;External\boost\libs\assign\include;External\boost\libs\atomic\include;External\boost\libs\bimap\include;External\boost\libs\bind\include;External\boost\libs\chrono\include;External\boost\libs\chrono\stopwatches\include;External\boost\libs\circular_buffer\include;External\boost\libs\compatibility\include;External\boost\libs\compute\include;External\boost\libs\concept_check\include;External\boost\libs\config\include;External\boost\libs\container\include;External\boost\libs\context\include;External\boost\libs\conversion\include;External\boost\libs\convert\include;External\boost\libs\core\include;External\boost\libs\coroutine\include;External\boost\libs\coroutine2\include;External\boost\libs\crc\include;External\boost\libs\date_time\include;External\boost\libs\detail\include;External\boost\libs\disjoint_sets\include;External\boost\libs\dll\include;External\boost\libs\dynamic_bitset\include;External\boost\libs\endian\include;External\boost\libs\exception\include;External\boost\libs\fiber\include;External\boost\libs\filesystem\include;External\boost\libs\flyweight\include;External\boost\libs\foreach\include;External\boost\libs\format\include;External\boost\libs\function\include;External\boost\libs\functional\include;External\boost\libs\function_types\include;External\boost\libs\fusion\include;External\boost\libs\fusion\include\boost\fusion\include;External\boost\libs\geometry\include;External\boost\libs\gil\include;External\boost\libs\graph\include;External\boost\libs\graph_parallel\include;External\boost\libs\hana\include;External\boost\libs\heap\include;External\boost\libs\icl\include;External\boost\libs\integer\include;External\boost\libs\interprocess\include;External\boost\libs\intrusive\include;External\boost\libs\io\include;External\boost\libs\iostreams\include;External\boost\libs\iterator\include;External\boost\libs\lambda\include;External\boost\libs\lexical_cast\include;External\boost\libs\locale\include;External\boost\libs\local_function\include;External\boost\libs\lockfree\include;External\boost\libs\log\include;External\boost\libs\logic\include;External\boost\libs\math\include;External\boost\libs\metaparse\include;External\boost\libs\metaparse\tools\benchmark\include;External\boost\libs\move\include;External\boost\libs\mpi\include;External\boost\libs\mpl\include;External\boost\libs\mpl\preprocessed\include;External\boost\libs\msm\include;External\boost\libs\multiprecision\include;External\boost\libs\multi_array\include;External\boost\libs\multi_index\include;External\boost\libs\numeric\conversion\include;External\boost\libs\numeric\interval\include;External\boost\libs\numeric\odeint\include;External\boost\libs\numeric\ublas\include;External\boost\libs\numeric\ublas\IDEs\qtcreator\include;External\boost\libs\optional\include;External\boost\libs\parameter\include;External\boost\libs\phoenix\include;External\boost\libs\phoenix\test\include;External\boost\libs\polygon\include;External\boost\libs\pool\include;External\boost\libs\predef\include;External\boost\libs\preprocessor\include;External\boost\libs\program_options\include;External\boost\libs\property_map\include;External\boost\libs\property_tree\include;External\boost\libs\proto\include;External\boost\libs\ptr_container\include;External\boost\libs\python\include;External\boost\libs\qvm\include;External\boost\libs\random\include;External\boost\libs\range\include;External\boost\libs\ratio\include;External\boost\libs\rational\include;External\boost\libs\regex\include;External\boost\libs\scope_exit\include;External\boost\libs\serialization\include;External\boost\libs\signals\include;External\boost\libs\signals2\include;External\boost\libs\smart_ptr\include;External\boost\libs\sort\include;External\boost\libs\spirit\include;External\boost\libs\spirit\include\boost\spirit\include;External\boost\libs\spirit\include\boost\spirit\repository\include;External\boost\libs\statechart\include;External\boost\libs\static_assert\include;External\boost\libs\system\include;External\boost\libs\test\include;External\boost\libs\thread\include;External\boost\libs\throw_exception\include;External\boost\libs\timer\include;External\boost\libs\tokenizer\include;External\boost\libs\tr1\include;External\boost\libs\tti\include;External\boost\libs\tuple\include;External\boost\libs\typeof\include;External\boost\libs\type_erasure\include;External\boost\libs\type_index\include;External\boost\libs\type_traits\include;External\boost\libs\units\include;External\boost\libs\unordered\include;External\boost\libs\utility\include;External\boost\libs\uuid\include;External\boost\libs\variant\include;External\boost\libs\vmd\include;External\boost\libs\wave\include;External\boost\libs\winapi\include;External\boost\libs\xpressive\include;External\boost\tools\auto_index\include;External\boost\tools\build\example\libraries\util\foo\include;External\boost\tools\build\example\pch\include;External\boost\tools\build\src\engine\boehm_gc\include;External\boost\tools\build\test\railsys\libx\include;External\boost\tools\build\test\railsys\program\include;External\boost\tools\quickbook\test\include;External\Cinder\include;$(ProjectDir)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/DDEBUG %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>External\Cinder\lib\msw\x64\Debug\v140\cinder.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ProjectDir)\External\Cinder\lib\msw\x64\Debug\v140\cinder.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

@@ -31,8 +31,6 @@ namespace GameOfLife
 {
     namespace Renderers
     {
-        const float CinderRenderer::DefaultFramerate(2);
-
         CinderRenderer::CinderRenderer()
             : m_isInitialized(false),
               m_takeSingleStep(false),
@@ -41,7 +39,7 @@ namespace GameOfLife
 
         void CinderRenderer::InitializeState(const std::vector<Cell>& cells)
         {
-            m_spState.reset(new State(cells));
+            m_spState.reset(new SparseGrid(cells));
             m_isInitialized = true;
         }
 
@@ -190,7 +188,6 @@ namespace GameOfLife
                 return;
             }
             m_takeSingleStep = false;
-            setFrameRate(DefaultFramerate);
 
             m_spState->AdvanceGeneration();
             UpdateState();
@@ -250,6 +247,5 @@ using namespace GameOfLife::Renderers;
 CINDER_APP(CinderRenderer, app::RendererGl, [](cinder::app::App::Settings* pSettings)
 {
     pSettings->setWindowSize(640, 480);
-    pSettings->setFrameRate(CinderRenderer::DefaultFramerate);
     pSettings->setHighDensityDisplayEnabled();
 });

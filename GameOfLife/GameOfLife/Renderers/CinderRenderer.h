@@ -1,6 +1,6 @@
 #pragma once
 
-#include <GameOfLife/State.h>
+#include <GameOfLife/SparseGrid.h>
 #include <GameOfLife/Cell.h>
 
 #include <cinder/app/app.h>
@@ -16,8 +16,6 @@ namespace GameOfLife
         class CinderRenderer : public cinder::app::App
         {
         public:
-            static const float DefaultFramerate;
-
             CinderRenderer();
 
             virtual void setup() override;
@@ -47,7 +45,7 @@ namespace GameOfLife
             std::vector<size_t>             m_meshVertexCounts;
             size_t                          m_meshesToDraw;
 
-            std::unique_ptr<State> m_spState;
+            std::unique_ptr<SparseGrid> m_spState;
             bool m_isInitialized;
 
             bool m_takeSingleStep;

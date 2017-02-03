@@ -12,9 +12,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="GameOfLife\State.cpp">
-      <Filter>GameOfLife</Filter>
-    </ClCompile>
     <ClCompile Include="GameOfLife\SubGrid.cpp">
       <Filter>GameOfLife</Filter>
     </ClCompile>
@@ -31,12 +28,15 @@
     <ClCompile Include="GameOfLife\AdjacencyIndex.cpp">
       <Filter>GameOfLife</Filter>
     </ClCompile>
+    <ClCompile Include="GameOfLife\SparseGrid.cpp">
+      <Filter>GameOfLife</Filter>
+    </ClCompile>
+    <ClCompile Include="GameOfLife\DebugGridDumper.cpp">
+      <Filter>GameOfLife</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameOfLife\Cell.h">
-      <Filter>GameOfLife</Filter>
-    </ClInclude>
-    <ClInclude Include="GameOfLife\State.h">
       <Filter>GameOfLife</Filter>
     </ClInclude>
     <ClInclude Include="GameOfLife\SubGrid.h">
@@ -71,6 +71,12 @@
     </ClInclude>
     <ClInclude Include="GameOfLife\Renderers\CinderRenderer_Shaders.h">
       <Filter>GameOfLife\Renderers</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLife\SparseGrid.h">
+      <Filter>GameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLife\DebugGridDumper.h">
+      <Filter>GameOfLife</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

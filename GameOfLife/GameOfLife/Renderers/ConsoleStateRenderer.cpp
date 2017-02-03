@@ -45,7 +45,7 @@ namespace GameOfLife { namespace Renderers {
     //
     ConsoleStateRenderer::~ConsoleStateRenderer() = default;
 
-    void ConsoleStateRenderer::Draw(const State& state)
+    void ConsoleStateRenderer::Draw(const SparseGrid& state)
     {
         //
         // Make a first pass and clear out the whole grid, then set cells

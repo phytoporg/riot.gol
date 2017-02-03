@@ -1,6 +1,8 @@
 #include "SubGrid.h"
 #include "SubgridGraph.h"
 
+#include "DebugGridDumper.h"
+
 #include <limits>
 #include <algorithm>
 
@@ -146,18 +148,19 @@ namespace GameOfLife
         return m_vertexData;
     }
 
-    void SubGrid::CopyRowFrom(
-        const SubGrid& other,
-        uint8_t const* pGrid,
+    void 
+    SubGrid::CopyRowFrom(
+        const SubGrid& src, uint8_t const* pSrcGrid,
+        const SubGrid& dst, uint8_t* pDstGrid,
         int64_t ySrc,
         int64_t yDst
         )
     {
-        assert(m_width == other.m_width);
-        const uint8_t* const pSrc = &pGrid[other.GetOffset(other.m_xMin, ySrc)];
-              uint8_t* const pDst = &m_pCurrentCellGrid[GetOffset(m_xMin, yDst)];
+        assert(dst.m_width == src.m_width);
+        const uint8_t* const pSrc = &pSrcGrid[src.GetOffset(src.m_xMin, ySrc)];
+              uint8_t* const pDst = &pDstGrid[dst.GetOffset(dst.m_xMin, yDst)];
 
-        memcpy(pDst, pSrc, m_width);
+        memcpy(pDst, pSrc, dst.m_width);
     }
 
     void SubGrid::ClearRow(uint8_t* pBuffer, int64_t row)
@@ -167,21 +170,21 @@ namespace GameOfLife
     }
 
     void SubGrid::CopyColumnFrom(
-        const SubGrid& other,
-        uint8_t const* pGrid,
+        const SubGrid& src, uint8_t const* pSrcGrid,
+        const SubGrid& dst, uint8_t* pDstGrid,
         int64_t xSrc,
         int64_t xDst
         )
     {
-        assert(m_height == other.m_height);
-        const uint8_t* pSrc = &pGrid[other.GetOffset(xSrc, m_yMin)];
-              uint8_t* pDst = &m_pCurrentCellGrid[GetOffset(xDst, other.m_yMin)];
+        assert(dst.m_height == src.m_height);
+        const uint8_t* pSrc = &pSrcGrid[src.GetOffset(xSrc, src.m_yMin)];
+              uint8_t* pDst = &pDstGrid[dst.GetOffset(xDst, dst.m_yMin)];
 
-        for (int64_t i = 0; i < m_height; i++)
+        for (int64_t i = 0; i < dst.m_height; i++)
         {
             *pDst = *pSrc;
-            pDst += m_bufferWidth;
-            pSrc += other.m_bufferWidth;
+            pDst += dst.m_bufferWidth;
+            pSrc += src.m_bufferWidth;
         }
     }
 
@@ -196,6 +199,66 @@ namespace GameOfLife
             *pDst = 0;
             pDst += m_bufferWidth;
         }
+    }
+
+    bool SubGrid::HasBorderCells() const
+    {
+        assert(!(m_bufferWidth & 0x4));
+        assert(!(m_bufferHeight & 0x4));
+
+        typedef int64_t SkipPtrType;
+
+        //
+        // Check top row first
+        //
+        uint8_t* pTemp = &m_pCurrentCellGrid[GetOffset(m_xMin - 1, m_yMin - 1)];
+        for (int64_t i = 0; i < m_bufferWidth / sizeof(SkipPtrType); i++)
+        {
+            auto pSkipTemp = reinterpret_cast<SkipPtrType*>(pTemp);
+            if (*pSkipTemp) return true;
+            pTemp += sizeof(SkipPtrType);
+        }
+
+        //
+        // Then the bottom
+        //
+        pTemp = &m_pCurrentCellGrid[GetOffset(m_xMin - 1, m_yMin + m_height)];
+        for (int64_t i = 0; i < m_bufferWidth / sizeof(SkipPtrType); i++)
+        {
+            auto pSkipTemp = reinterpret_cast<SkipPtrType*>(pTemp);
+            if (*pSkipTemp) return true;
+            pTemp += sizeof(SkipPtrType);
+        }
+
+        //
+        // Left
+        //
+        pTemp = &m_pCurrentCellGrid[GetOffset(m_xMin - 1, m_yMin - 1)];
+        for (int64_t i = 0; i < m_bufferHeight; i++)
+        {
+            if (*pTemp)
+            {
+                return true;
+            }
+
+            pTemp += m_bufferWidth;
+        }
+
+        //
+        // Right
+        //
+        pTemp = &m_pCurrentCellGrid[GetOffset(m_xMin + m_width, m_yMin - 1)];
+        for (int64_t i = 0; i < m_bufferHeight; i++)
+        {
+            if (*pTemp)
+            {
+                return true;
+            }
+
+            pTemp += m_bufferWidth;
+        }
+
+        return false;
     }
 
     uint32_t SubGrid::AdvanceGeneration()
@@ -263,6 +326,29 @@ namespace GameOfLife
         ++m_generation;
         m_pCurrentCellGrid = pOtherGrid;
 
+        //
+        // Need to copy border states to new generation grid as well to correctly
+        // identify new neighbors to create after this generation has completed.
+        //
+        for (int i = 0; i < AdjacencyIndex::MAX; ++i)
+        {
+            SubGrid* pNeighbor = ppNeighbors[i];
+            if (!pNeighbor)
+            {
+                continue;
+            }
+
+            CopyBorder(*pNeighbor, static_cast<AdjacencyIndex>(i));
+        }
+
+        DebugGridDumper::OpenFile("grid_dump.txt");
+        DebugGridDumper::DumpGrid(
+            m_generation - 1,
+            GetCoordinates(),
+            m_pCurrentCellGrid,
+            OtherPointer(m_pCurrentCellGrid, m_pCellGrids[0], m_pCellGrids[1])
+        );
+
         return static_cast<uint32_t>(m_vertexData.size());
     }
 
@@ -282,23 +368,21 @@ namespace GameOfLife
             return false;
         }
 
+        const int64_t BufferLeftX   = m_xMin - 1;
+        const int64_t BufferRightX  = m_xMin + m_width;
+        const int64_t BufferTopY    = m_yMin - 1;
+        const int64_t BufferBottomY = m_yMin + m_height;
+
+        const int64_t LeftX   = m_xMin;
+        const int64_t RightX  = m_xMin + m_width - 1;
+        const int64_t TopY    = m_yMin;
+        const int64_t BottomY = m_yMin + m_height - 1;
+
         switch (adjacency)
         {
-            //
-            // TODO: These
-            //
-        case GameOfLife::TOP_LEFT:
-            break;
-        case GameOfLife::TOP_RIGHT:
-            break;
-        case GameOfLife::BOTTOM_LEFT:
-            break;
-        case GameOfLife::BOTTOM_RIGHT:
-            break;
-
         case GameOfLife::TOP:
         {
-            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(m_xMin, m_yMin)];
+            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(LeftX, TopY)];
             for (int64_t i = 0; i < m_width; i++)
             {
                 const uint32_t Value = *(reinterpret_cast<uint32_t*>(pStart));
@@ -309,11 +393,13 @@ namespace GameOfLife
 
                 pStart++;
             }
+            return !!m_pCurrentCellGrid[GetOffset(BufferLeftX,  BufferTopY)] ||
+                   !!m_pCurrentCellGrid[GetOffset(BufferRightX, BufferTopY)];
         }
             break;
         case GameOfLife::BOTTOM:
         {
-            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(m_xMin, m_yMin + m_height - 1)];
+            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(LeftX, BottomY)];
             for (int64_t i = 0; i < m_width; i++)
             {
                 const uint32_t Value = *(reinterpret_cast<uint32_t*>(pStart)) >> 8;
@@ -324,14 +410,15 @@ namespace GameOfLife
 
                 pStart++;
             }
+            return !!m_pCurrentCellGrid[GetOffset(BufferLeftX,  BufferBottomY)] ||
+                   !!m_pCurrentCellGrid[GetOffset(BufferRightX, BufferBottomY)];
         }
             break;
 
         case GameOfLife::LEFT:
         {
-            uint8_t previousValue = 0;
             uint8_t consecutiveCells = 0;
-            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(m_xMin, m_yMin)];
+            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(LeftX, TopY)];
             for (int64_t i = 0; i < m_height; i++)
             {
                 if (*pStart)
@@ -348,16 +435,16 @@ namespace GameOfLife
                     return true;
                 }
 
-                previousValue = *pStart;
                 pStart += m_bufferWidth;
             }
+            return !!m_pCurrentCellGrid[GetOffset(BufferLeftX, BufferTopY)] ||
+                   !!m_pCurrentCellGrid[GetOffset(BufferLeftX, BufferBottomY)];
         }
             break;
         case GameOfLife::RIGHT:
         {
-            uint8_t previousValue = 0;
             uint8_t consecutiveCells = 0;
-            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(m_xMin + m_width - 1, m_yMin)];
+            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(RightX, TopY)];
             for (int64_t i = 0; i < m_height; i++)
             {
                 if (*pStart)
@@ -374,15 +461,18 @@ namespace GameOfLife
                     return true;
                 }
 
-                previousValue = *pStart;
                 pStart += m_bufferWidth;
             }
+            return !!m_pCurrentCellGrid[GetOffset(BufferRightX, BufferTopY)] ||
+                   !!m_pCurrentCellGrid[GetOffset(BufferRightX, BufferBottomY)];
         }
             break;
         default:
-            assert(false);
             break;
         }
+
+        assert(adjacency >= 0);
+        assert(adjacency < AdjacencyIndex::MAX);
 
         return false;
     }
@@ -417,6 +507,7 @@ namespace GameOfLife
         case AdjacencyIndex::TOP:
             CopyRowFrom(
                 other, pNeighborGrid,
+                *this, m_pCurrentCellGrid,
                 other.YMin() + other.Height() - 1,
                 m_yMin - 1
                 );
@@ -432,6 +523,7 @@ namespace GameOfLife
         case AdjacencyIndex::LEFT:
             CopyColumnFrom(
                 other, pNeighborGrid,
+                *this, m_pCurrentCellGrid,
                 other.XMin() + other.Width() - 1,
                 m_xMin - 1
                 );
@@ -439,6 +531,7 @@ namespace GameOfLife
         case AdjacencyIndex::RIGHT:
             CopyColumnFrom(
                 other, pNeighborGrid,
+                *this, m_pCurrentCellGrid,
                 other.XMin(),
                 m_xMin + m_width
                 );
@@ -454,6 +547,7 @@ namespace GameOfLife
         case AdjacencyIndex::BOTTOM:
             CopyRowFrom(
                 other, pNeighborGrid,
+                *this, m_pCurrentCellGrid,
                 other.YMin(),
                 m_yMin + m_height
                 );
@@ -462,8 +556,85 @@ namespace GameOfLife
             m_pCurrentCellGrid[GetOffset(m_xMin + m_width, m_yMin + m_height)] = 
                 other.GetCellState(
                     pNeighborGrid,
-                    other.XMin() + other.Width()  - 1,
-                    other.YMin() + other.Height() - 1
+                    other.XMin(),
+                    other.YMin()
+                    );
+            break;
+        default:
+            assert(false);
+            break;
+        }
+    }
+
+    void SubGrid::PublishBorder(SubGrid& other, AdjacencyIndex adjacency)
+    {
+        assert(m_generation == other.m_generation);
+        uint8_t* pNeighborGrid = other.m_pCurrentCellGrid;
+
+        switch (adjacency)
+        {
+        case AdjacencyIndex::TOP_LEFT:
+            pNeighborGrid[other.GetOffset(other.XMin() - 1, other.YMin() - 1)] = 
+                GetCellState(
+                    m_pCurrentCellGrid,
+                    XMin() + Width()  - 1,
+                    YMin() + Height() - 1
+                    );
+            break;
+        case AdjacencyIndex::TOP:
+            CopyRowFrom(
+                *this, m_pCurrentCellGrid,
+                other, pNeighborGrid,
+                YMin() + Height() - 1,
+                other.YMin() - 1
+                );
+            break;
+        case AdjacencyIndex::TOP_RIGHT:
+            pNeighborGrid[other.GetOffset(other.XMin() + other.Width(), other.YMin() - 1)] = 
+                GetCellState(
+                    m_pCurrentCellGrid,
+                    XMin(),
+                    YMin() + Height() - 1
+                    );
+            break;
+        case AdjacencyIndex::LEFT:
+            CopyColumnFrom(
+                *this, m_pCurrentCellGrid,
+                other, pNeighborGrid,
+                XMin() + Width() - 1,
+                other.XMin() - 1
+                );
+            break;
+        case AdjacencyIndex::RIGHT:
+            CopyColumnFrom(
+                *this, m_pCurrentCellGrid,
+                other, pNeighborGrid,
+                XMin(),
+                other.XMin() + other.Width()
+                );
+            break;
+        case AdjacencyIndex::BOTTOM_LEFT:
+            pNeighborGrid[other.GetOffset(other.XMin() - 1, other.YMin() + other.Height())] = 
+                GetCellState(
+                    m_pCurrentCellGrid,
+                    XMin() + Width() - 1,
+                    YMin()
+                    );
+            break;
+        case AdjacencyIndex::BOTTOM:
+            CopyRowFrom(
+                *this, m_pCurrentCellGrid,
+                other, pNeighborGrid,
+                YMin(),
+                other.YMin() + other.Height()
+                );
+            break;
+        case AdjacencyIndex::BOTTOM_RIGHT:
+            pNeighborGrid[other.GetOffset(other.XMin() + other.Width(), other.YMin() + other.Height())] = 
+                GetCellState(
+                    m_pCurrentCellGrid,
+                    XMin() + Width()  - 1,
+                    YMin() + Height() - 1
                     );
             break;
         default:
