@@ -295,4 +295,43 @@ namespace GameOfLife
             }
         }
     }
+
+    std::ostream& operator<<(std::ostream& out, const SparseGrid& grid)
+    {
+        out << "(" << grid.XMin() << "," << grid.YMin() << "," << grid.Width() << "," << grid.Height() << ")\n"
+            << grid.m_generationCount << "\n"
+            << grid.m_subgridStorage.GetSize() << "\n";
+
+        for (auto it = grid.begin(); it != grid.end(); ++it)
+        {
+            const auto& Subgrid = it->second;
+            out << "(" << Subgrid.XMin() << "," << Subgrid.YMin() << "," << Subgrid.Width() << "," << Subgrid.Height() << ")\n";
+
+            const int64_t YMax = Subgrid.YMin() + Subgrid.Height();
+            const int64_t XMax = Subgrid.XMin() + Subgrid.Width();
+            for (int64_t y = Subgrid.YMin(); y < YMax; y++)
+            {
+                for (int64_t x = Subgrid.XMin(); x < XMax; x++)
+                {
+                    if (Subgrid.GetCellState(x, y))
+                    {
+                        out << "1";
+                    }
+                    else
+                    {
+                        out << "0";
+                    }
+
+                    if (x < XMax - 1)
+                    {
+                        out << ",";
+                    }
+                }
+                out << "\n";
+            }
+            out.flush();
+        }
+
+        return out;
+    }
 }

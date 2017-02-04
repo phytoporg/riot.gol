@@ -23,6 +23,7 @@
     <ClCompile Include="GameOfLife\AdjacencyIndex.cpp" />
     <ClCompile Include="GameOfLife\DebugGridDumper.cpp" />
     <ClCompile Include="GameOfLife\Renderers\ConsoleStateRenderer.cpp" />
+    <ClCompile Include="GameOfLife\Renderers\FileStateRenderer.cpp" />
     <ClCompile Include="GameOfLife\SparseGrid.cpp" />
     <ClCompile Include="GameOfLife\SubgridStorage.cpp" />
     <ClCompile Include="GameOfLife\SubGrid.cpp" />
@@ -37,6 +38,7 @@
     <ClInclude Include="GameOfLife\Renderers\CinderRenderer.h" />
     <ClInclude Include="GameOfLife\Renderers\CinderRenderer_Shaders.h" />
     <ClInclude Include="GameOfLife\Renderers\ConsoleStateRenderer.h" />
+    <ClInclude Include="GameOfLife\Renderers\FileStateRenderer.h" />
     <ClInclude Include="GameOfLife\SparseGrid.h" />
     <ClInclude Include="GameOfLife\SubgridStorage.h" />
     <ClInclude Include="GameOfLife\SubGrid.h" />
@@ -130,10 +132,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

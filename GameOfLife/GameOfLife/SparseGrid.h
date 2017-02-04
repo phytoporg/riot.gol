@@ -13,6 +13,7 @@
 #include <Utility/AlignedMemoryPool.h>
 
 #include <vector>
+#include <ostream>
 
 namespace GameOfLife
 {
@@ -31,6 +32,8 @@ namespace GameOfLife
         SubgridStorage::const_iterator begin() const { return m_subgridStorage.begin(); }
         SubgridStorage::const_iterator end()   const { return m_subgridStorage.end(); }
 
+        friend std::ostream& operator<<(std::ostream& out, const SparseGrid& grid);
+
     private:
         SparseGrid() = delete;
         SparseGrid(const SparseGrid& other) = delete;
@@ -42,11 +45,6 @@ namespace GameOfLife
             SubgridStorage::const_iterator end
             );
 
-        //
-        // Subgrid storage. TODO: Don't use a vector. Will have to incur a linear
-        // lookup and "shuffle" cost for deletion. Fine for now, but not great at
-        // scale.
-        //
         SubgridStorage m_subgridStorage;
 
         //

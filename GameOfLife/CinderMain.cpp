@@ -1,5 +1,6 @@
 #include <GameOfLife\Renderers\CinderRenderer.h>
 #include <GameOfLife\Renderers\CinderRenderer_Shaders.h>
+#include <GameOfLife\Renderers\FileStateRenderer.h>
 
 #include <cinder/gl/gl.h>
 #include <cinder/app/RendererGl.h>
@@ -31,10 +32,13 @@ namespace GameOfLife
 {
     namespace Renderers
     {
+
         CinderRenderer::CinderRenderer()
             : m_isInitialized(false),
               m_takeSingleStep(false),
-              m_gameState(PAUSED)
+              m_gameState(PAUSED),
+              m_countingGenerations(false),
+              m_generationsRemaining(0)
         {}
 
         void CinderRenderer::InitializeState(const std::vector<Cell>& cells)
@@ -45,6 +49,11 @@ namespace GameOfLife
 
         void CinderRenderer::UpdateState()
         {
+            if (m_countingGenerations && !m_generationsRemaining)
+            {
+                quit();
+            }
+
             size_t i = 0;
             for (auto it = m_spState->begin(); it != m_spState->end(); ++it)
             {
@@ -88,6 +97,16 @@ namespace GameOfLife
             }
 
             m_meshesToDraw = i;
+
+            if (m_spFileStateRenderer)
+            {
+                *m_spFileStateRenderer << *m_spState;
+            }
+
+            if (m_countingGenerations)
+            {
+                m_generationsRemaining--;
+            }
         }
 
         void CinderRenderer::keyUp(cinder::app::KeyEvent e)
@@ -134,6 +153,17 @@ namespace GameOfLife
                 std::stringstream ss;
                 ss << "Failed to open " << filename << std::endl;
                 Fail(console(), ss.str());
+            }
+
+            if (args.size() > 2)
+            {
+                m_countingGenerations = true;
+                m_generationsRemaining = atoi(args[2].c_str());
+            }
+
+            if (args.size() > 3)
+            {
+                m_spFileStateRenderer.reset(new FileStateRenderer(args[3]));
             }
 
             std::vector<GameOfLife::Cell> cells;
@@ -246,6 +276,6 @@ namespace GameOfLife
 using namespace GameOfLife::Renderers;
 CINDER_APP(CinderRenderer, app::RendererGl, [](cinder::app::App::Settings* pSettings)
 {
-    pSettings->setWindowSize(640, 480);
+    pSettings->setWindowSize(1024, 768);
     pSettings->setHighDensityDisplayEnabled();
 });

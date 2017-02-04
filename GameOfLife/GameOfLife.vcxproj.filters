@@ -34,6 +34,7 @@
     <ClCompile Include="GameOfLife\DebugGridDumper.cpp">
       <Filter>GameOfLife</Filter>
     </ClCompile>
+    <ClCompile Include="GameOfLife\Renderers\FileStateRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameOfLife\Cell.h">
@@ -77,6 +78,9 @@
     </ClInclude>
     <ClInclude Include="GameOfLife\DebugGridDumper.h">
       <Filter>GameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOfLife\Renderers\FileStateRenderer.h">
+      <Filter>GameOfLife\Renderers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

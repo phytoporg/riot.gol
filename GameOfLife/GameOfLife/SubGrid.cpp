@@ -416,8 +416,6 @@ namespace GameOfLife
 
                 pStart++;
             }
-            return !!m_pCurrentCellGrid[GetOffset(BufferLeftX,  BufferTopY)] ||
-                   !!m_pCurrentCellGrid[GetOffset(BufferRightX, BufferTopY)];
         }
             break;
         case GameOfLife::BOTTOM:
@@ -433,8 +431,6 @@ namespace GameOfLife
 
                 pStart++;
             }
-            //return !!m_pCurrentCellGrid[GetOffset(BufferLeftX,  BufferBottomY)] ||
-            //       !!m_pCurrentCellGrid[GetOffset(BufferRightX, BufferBottomY)];
         }
             break;
 
@@ -460,8 +456,6 @@ namespace GameOfLife
 
                 pStart += m_bufferWidth;
             }
-            return !!m_pCurrentCellGrid[GetOffset(BufferLeftX, BufferTopY)] ||
-                   !!m_pCurrentCellGrid[GetOffset(BufferLeftX, BufferBottomY)];
         }
             break;
         case GameOfLife::RIGHT:
@@ -486,8 +480,6 @@ namespace GameOfLife
 
                 pStart += m_bufferWidth;
             }
-            return !!m_pCurrentCellGrid[GetOffset(BufferRightX, BufferTopY)] ||
-                   !!m_pCurrentCellGrid[GetOffset(BufferRightX, BufferBottomY)];
         }
             break;
         default:

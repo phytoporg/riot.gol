@@ -3,6 +3,8 @@
 #include <GameOfLife/SparseGrid.h>
 #include <GameOfLife/Cell.h>
 
+#include <GameOfLife/Renderers/FileStateRenderer.h>
+
 #include <cinder/app/app.h>
 #include <cinder/camera.h>
 #include <cinder/gl/gl.h>
@@ -24,7 +26,6 @@ namespace GameOfLife
             virtual void keyUp(cinder::app::KeyEvent e) override;
 
         private:
-            
             enum GameState
             {
                 PAUSED,
@@ -47,8 +48,11 @@ namespace GameOfLife
 
             std::unique_ptr<SparseGrid> m_spState;
             bool m_isInitialized;
-
             bool m_takeSingleStep;
+
+            std::unique_ptr<FileStateRenderer> m_spFileStateRenderer;
+            bool m_countingGenerations;
+            int32_t m_generationsRemaining;
         };
     }
 }
