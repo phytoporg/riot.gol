@@ -11,6 +11,15 @@
 
 #include <memory>
 
+//
+// Forward declarations
+//
+
+namespace Utility
+{
+    template <size_t N> class AlignedMemoryPool;
+}
+
 namespace GameOfLife
 {
     namespace Renderers
@@ -33,6 +42,12 @@ namespace GameOfLife
                 MAX
             };
 
+            //
+            // Memory pool must be destroyed *after* game state is destroyed, 
+            // so ensure  that it is declared beforehand (destructor removes 
+            // objects in reverse order of declaration).
+            //
+            Utility::AlignedMemoryPool<64> m_memoryPool;
             GameState m_gameState;
 
             void InitializeState(const std::vector<Cell>& cells);

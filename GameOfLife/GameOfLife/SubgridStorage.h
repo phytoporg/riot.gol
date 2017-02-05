@@ -17,10 +17,17 @@ namespace GameOfLife
     {
     public:
         //
-        // Returns false if attempting to insert duplicates.
+        // If any of the subgrids attempting to be added are already in
+        // storage, Add() returns false and no new subgrids are added.
         //
-        bool Add(const SubGrid& subgrid, SubGridGraph& graph);
-        bool Add(const std::vector<SubGrid>& subgrids, SubGridGraph& graph);
+        bool Add(const SubGridPtr spSubgrid);
+        bool Add(const std::vector<SubGridPtr>& subgrids);
+
+        //
+        // Returns true if the provided subgrid already exists in 
+        // storage.
+        //
+        bool Query(const SubGrid::CoordinateType& coordinate, /* out */SubGridPtr& spSubgridOut);
 
         ~SubgridStorage();
 
@@ -28,12 +35,12 @@ namespace GameOfLife
         // Returns false if attempting to remove subgrid which does
         // not exist in storage.
         //
-        bool Remove(const SubGrid& subgrid);
+        bool Remove(const SubGridPtr& spSubgrid);
 
         size_t GetSize() const { return m_subgridMap.size(); }
 
     private:
-        std::unordered_map<SubGrid::CoordinateType, SubGrid> m_subgridMap;
+        std::unordered_map<SubGrid::CoordinateType, SubGridPtr> m_subgridMap;
 
     public:
         using iterator       = decltype(m_subgridMap)::iterator;

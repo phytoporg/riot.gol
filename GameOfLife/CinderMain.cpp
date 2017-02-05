@@ -1,6 +1,8 @@
-#include <GameOfLife\Renderers\CinderRenderer.h>
-#include <GameOfLife\Renderers\CinderRenderer_Shaders.h>
-#include <GameOfLife\Renderers\FileStateRenderer.h>
+#include <GameOfLife/Renderers/CinderRenderer.h>
+#include <GameOfLife/Renderers/CinderRenderer_Shaders.h>
+#include <GameOfLife/Renderers/FileStateRenderer.h>
+
+#include <Utility/AlignedMemoryPool.h>
 
 #include <cinder/gl/gl.h>
 #include <cinder/app/RendererGl.h>
@@ -38,12 +40,13 @@ namespace GameOfLife
               m_takeSingleStep(false),
               m_gameState(PAUSED),
               m_countingGenerations(false),
-              m_generationsRemaining(0)
+              m_generationsRemaining(0),
+              m_memoryPool((SubGrid::SUBGRID_WIDTH + 2) * (SubGrid::SUBGRID_HEIGHT + 2), 32)
         {}
 
         void CinderRenderer::InitializeState(const std::vector<Cell>& cells)
         {
-            m_spState.reset(new SparseGrid(cells));
+            m_spState.reset(new SparseGrid(cells, m_memoryPool));
             m_isInitialized = true;
         }
 
@@ -52,12 +55,13 @@ namespace GameOfLife
             if (m_countingGenerations && !m_generationsRemaining)
             {
                 quit();
+                return;
             }
 
             size_t i = 0;
             for (auto it = m_spState->begin(); it != m_spState->end(); ++it)
             {
-                auto& subgrid = it->second;
+                SubGridPtr spSubgrid = it->second;
                 if (i >= m_meshes.size())
                 {
                     std::vector<gl::VboMesh::Layout> layouts =
@@ -69,11 +73,11 @@ namespace GameOfLife
                     m_meshes.push_back(
                         gl::VboMesh::create(VertexCountPerSubgrid, GL_POINTS, layouts)
                         );
-                    m_meshVertexCounts.push_back(subgrid.GetVertexData().size());
+                    m_meshVertexCounts.push_back(spSubgrid->GetVertexData().size());
                 }
                 else
                 {
-                    m_meshVertexCounts[i] = subgrid.GetVertexData().size();
+                    m_meshVertexCounts[i] = spSubgrid->GetVertexData().size();
                 }
 
                 auto& meshRef = m_meshes[i];
@@ -87,7 +91,7 @@ namespace GameOfLife
                 vboRef->bufferSubData(
                     0,
                     sizeof(SubGrid::VertexType) * m_meshVertexCounts[i],
-                    subgrid.GetVertexData().data()
+                    spSubgrid->GetVertexData().data()
                     );
                 vboRef->unbind();
 

@@ -13,19 +13,6 @@
 
 namespace
 {
-    void ValidateDimensions(int64_t width, int64_t height)
-    {
-        if (width <= 0)
-        {
-            throw std::out_of_range("SubGrid width is not positive");
-        }
-
-        if (height <= 0)
-        {
-            throw std::out_of_range("SubGrid height is not positive");
-        }
-    }
-
     template<typename T>
     T* OtherPointer(T* pPointer, T* pOption1, T* pOption2)
     {
@@ -65,22 +52,17 @@ namespace
 
 namespace GameOfLife
 {
-    SubGrid::SubGrid()
-        : RectangularGrid(0, 0, 0, 0)
-    {}
-
     SubGrid::SubGrid(
-        uint8_t* ppGrids[2],
+        Utility::AlignedMemoryPool<64>& memoryPool,
         SubGridGraph& graph, 
-        int64_t xmin, int64_t width,
-        int64_t ymin, int64_t height,
+        int64_t xmin, int64_t ymin,
         uint32_t generation
         )
-        : RectangularGrid(xmin, width, ymin, height),
+        : RectangularGrid(xmin, SubGrid::SUBGRID_WIDTH, ymin, SubGrid::SUBGRID_HEIGHT),
           m_generation(generation),
-          m_pGridGraph(&graph)
+          m_pGridGraph(&graph),
+          m_memoryPool(memoryPool)
     {
-        ValidateDimensions(m_width, m_height);
         m_vertexData.reserve(SUBGRID_WIDTH * SUBGRID_HEIGHT);
 
         //
@@ -89,11 +71,19 @@ namespace GameOfLife
         m_bufferWidth  = m_width + 2;
         m_bufferHeight = m_height + 2;
 
-        m_pCellGrids[0] = ppGrids[0];
-        m_pCellGrids[1] = ppGrids[1];
+        m_pCellGrids[0] = m_memoryPool.Allocate();
+        m_pCellGrids[1] = m_memoryPool.Allocate();
         m_pCurrentCellGrid = m_pCellGrids[0];
 
         m_coordinates = std::make_pair(m_xMin, m_yMin);
+    }
+
+    SubGrid::~SubGrid()
+    {
+        m_memoryPool.Free(m_pCellGrids[0]);
+        m_pCellGrids[0] = nullptr;
+        m_memoryPool.Free(m_pCellGrids[1]);
+        m_pCellGrids[1] = nullptr;
     }
 
     size_t SubGrid::GetOffset(int64_t x, int64_t y) const
@@ -290,7 +280,7 @@ namespace GameOfLife
         // Copy neighbor border data if it exists.
         //
         SubGrid** ppNeighbors;
-        if (!m_pGridGraph->GetNeighborArray(*this, ppNeighbors))
+        if (!m_pGridGraph->GetNeighborArray(this, ppNeighbors))
         {
             assert(false);
             throw "Subgrid exists but isn't in the grid graph!";
@@ -368,6 +358,7 @@ namespace GameOfLife
         DebugGridDumper::DumpGrid(
             m_generation - 1,
             GetCoordinates(),
+            *this,
             m_pCurrentCellGrid,
             OtherPointer(m_pCurrentCellGrid, m_pCellGrids[0], m_pCellGrids[1])
         );
@@ -377,10 +368,8 @@ namespace GameOfLife
 
     bool SubGrid::IsNextGenerationNeighbor(AdjacencyIndex adjacency) const
     {
-        const uint32_t MagicNumber = 0x010101;
-
         SubGrid** ppNeighbors;
-        if (!m_pGridGraph->GetNeighborArray(*this, ppNeighbors))
+        if (!m_pGridGraph->GetNeighborArray(this, ppNeighbors))
         {
             assert(false);
             throw "Subgrid exists but isn't in the grid graph!";
@@ -403,13 +392,38 @@ namespace GameOfLife
 
         switch (adjacency)
         {
+        case GameOfLife::TOP_LEFT:
+            return GetCellState(BufferLeftX, TopY) && 
+                   GetCellState(LeftX, TopY) &&
+                   GetCellState(LeftX, BufferTopY);
+        case GameOfLife::TOP_RIGHT:
+            return GetCellState(BufferRightX, TopY) && 
+                   GetCellState(RightX, TopY) &&
+                   GetCellState(BufferRightX, BufferTopY);
+        case GameOfLife::BOTTOM_LEFT:
+            return GetCellState(BufferLeftX, BottomY) && 
+                   GetCellState(LeftX, BottomY) &&
+                   GetCellState(LeftX, BufferBottomY);
+        case GameOfLife::BOTTOM_RIGHT:
+            return GetCellState(BufferRightX, BottomY) && 
+                   GetCellState(RightX, BottomY) &&
+                   GetCellState(RightX, BufferTopY);
         case GameOfLife::TOP:
         {
-            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(LeftX, TopY)];
-            for (int64_t i = 0; i < m_width; i++)
+            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(BufferLeftX, TopY)];
+            uint32_t numConsecutiveLivingCells = 0;
+            for (int64_t i = 0; i < m_bufferWidth; i++)
             {
-                const uint32_t Value = *(reinterpret_cast<uint32_t*>(pStart));
-                if (Value == MagicNumber)
+                if (*pStart)
+                {
+                    numConsecutiveLivingCells++;
+                }
+                else
+                {
+                    numConsecutiveLivingCells = 0;
+                }
+
+                if (numConsecutiveLivingCells == 3)
                 {
                     return true;
                 }
@@ -420,11 +434,20 @@ namespace GameOfLife
             break;
         case GameOfLife::BOTTOM:
         {
-            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(LeftX, BottomY)];
-            for (int64_t i = 0; i < m_width; i++)
+            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(BufferLeftX, BottomY)];
+            uint32_t consecutiveLivingCells = 0;
+            for (int64_t i = 0; i < m_bufferWidth; i++)
             {
-                const uint32_t Value = *(reinterpret_cast<uint32_t*>(pStart)) >> 8;
-                if (Value == MagicNumber)
+                if (*pStart)
+                {
+                    consecutiveLivingCells++;
+                }
+                else
+                {
+                    consecutiveLivingCells = 0;
+                }
+
+                if (consecutiveLivingCells == 3)
                 {
                     return true;
                 }
@@ -436,20 +459,20 @@ namespace GameOfLife
 
         case GameOfLife::LEFT:
         {
-            uint8_t consecutiveCells = 0;
-            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(LeftX, TopY)];
-            for (int64_t i = 0; i < m_height; i++)
+            uint8_t consecutiveLivingCells = 0;
+            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(LeftX, BufferTopY)];
+            for (int64_t i = 0; i < m_bufferHeight; i++)
             {
                 if (*pStart)
                 {
-                    ++consecutiveCells;
+                    ++consecutiveLivingCells;
                 }
                 else
                 {
-                    consecutiveCells = 0;
+                    consecutiveLivingCells = 0;
                 }
 
-                if (consecutiveCells == 3)
+                if (consecutiveLivingCells == 3)
                 {
                     return true;
                 }
@@ -460,20 +483,20 @@ namespace GameOfLife
             break;
         case GameOfLife::RIGHT:
         {
-            uint8_t consecutiveCells = 0;
-            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(RightX, TopY)];
-            for (int64_t i = 0; i < m_height; i++)
+            uint8_t consecutiveLivingCells = 0;
+            uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(RightX, BufferTopY)];
+            for (int64_t i = 0; i < m_bufferHeight; i++)
             {
                 if (*pStart)
                 {
-                    ++consecutiveCells;
+                    ++consecutiveLivingCells;
                 }
                 else
                 {
-                    consecutiveCells = 0;
+                    consecutiveLivingCells = 0;
                 }
 
-                if (consecutiveCells == 3)
+                if (consecutiveLivingCells == 3)
                 {
                     return true;
                 }

@@ -7,49 +7,61 @@ namespace GameOfLife
 {
     SubgridStorage::~SubgridStorage() = default;
 
-    bool SubgridStorage::Add(const SubGrid& subgrid, SubGridGraph& graph)
+    bool SubgridStorage::Add(const SubGridPtr spSubgrid)
     {
-        if (m_subgridMap.find(subgrid.GetCoordinates()) != m_subgridMap.end())
+        const SubGrid::CoordinateType& Coordinates = spSubgrid->GetCoordinates();
+        if (m_subgridMap.find(Coordinates) != m_subgridMap.end())
         {
             return false;
         }
 
-        m_subgridMap[subgrid.GetCoordinates()] = subgrid;
-        graph.AddVertex(m_subgridMap[subgrid.GetCoordinates()]);
-
+        m_subgridMap[Coordinates] = spSubgrid;
         return true;
     }
 
-    bool SubgridStorage::Add(const std::vector<SubGrid>& subgrids, SubGridGraph& graph)
+    bool SubgridStorage::Add(const std::vector<SubGridPtr>& subgridPtrs)
     {
         //
         // Don't add anything if there's a single duplicate.
         //
-        for (const auto& subgrid : subgrids)
+        for (const auto& spSubgrid : subgridPtrs)
         {
-            if (m_subgridMap.find(subgrid.GetCoordinates()) != m_subgridMap.end())
+            if (m_subgridMap.find(spSubgrid->GetCoordinates()) != m_subgridMap.end())
             {
                 return false;
             }
         }
 
-        for (const auto& subgrid : subgrids)
+        //
+        // No duplicates found. Go ahead and add all subgrids in the vector.
+        //
+        for (const auto& spSubgrid : subgridPtrs)
         {
-            m_subgridMap[subgrid.GetCoordinates()] = subgrid;
-            graph.AddVertex(m_subgridMap[subgrid.GetCoordinates()]);
+            const SubGrid::CoordinateType& Coordinates = spSubgrid->GetCoordinates();
+            m_subgridMap[Coordinates] = spSubgrid;
         }
 
         return true;
     }
 
-    bool SubgridStorage::Remove(const SubGrid& subgrid)
+    bool SubgridStorage::Query(const SubGrid::CoordinateType& coord, SubGridPtr& spSubgridOut)
     {
-        if (m_subgridMap.find(subgrid.GetCoordinates()) == m_subgridMap.end())
+        auto it = m_subgridMap.find(coord);
+        if (it != m_subgridMap.end())
         {
-            return false;
+            spSubgridOut = it->second;
+            return true;
         }
 
-        m_subgridMap.erase(subgrid.GetCoordinates());
-        return true;
+        return false;
+    }
+
+    bool SubgridStorage::Remove(const SubGridPtr& spSubgrid)
+    {
+        //
+        // Return false if we didn't actually erase anything because this
+        // subgrid was not found.
+        //
+        return m_subgridMap.erase(spSubgrid->GetCoordinates()) > 0;
     }
 }

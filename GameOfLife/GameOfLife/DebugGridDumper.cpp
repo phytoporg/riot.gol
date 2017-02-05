@@ -23,6 +23,7 @@ namespace GameOfLife
     DebugGridDumper::DumpGrid(
         uint32_t generation,
         SubGrid::CoordinateType t,
+        const RectangularGrid& bounds,
         uint8_t const* pBefore,
         uint8_t const* pAfter
     )
@@ -31,12 +32,15 @@ namespace GameOfLife
         assert(s_fileStream);
         s_fileStream << std::dec << generation << std::endl;
         s_fileStream << "(" << t.first << ", " << t.second << ")" << std::endl;
-        for (int64_t row = 0; row < SubGrid::SUBGRID_HEIGHT + 2; row++)
+
+        const int64_t MaxRow = bounds.Height() + 2;
+        const int64_t MaxCol = bounds.Width() + 2;
+        for (int64_t row = 0; row < MaxRow; row++)
         {
-            for (int64_t col = 0; col < SubGrid::SUBGRID_WIDTH + 2; col++)
+            for (int64_t col = 0; col < MaxCol; col++)
             {
                 s_fileStream << std::hex << static_cast<int>(*(pBefore++));
-                if (col <= SubGrid::SUBGRID_WIDTH)
+                if (col < MaxCol - 1)
                 {
                     s_fileStream << ",";
                 }
@@ -44,10 +48,10 @@ namespace GameOfLife
 
             s_fileStream << " ";
 
-            for (int64_t col = 0; col < SubGrid::SUBGRID_WIDTH + 2; col++)
+            for (int64_t col = 0; col < MaxCol; col++)
             {
                 s_fileStream << std::hex << static_cast<int>(*(pAfter++));
-                if (col <= SubGrid::SUBGRID_WIDTH)
+                if (col < MaxCol - 1)
                 {
                     s_fileStream << ",";
                 }

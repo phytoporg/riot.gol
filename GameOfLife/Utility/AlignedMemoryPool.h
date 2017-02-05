@@ -55,6 +55,7 @@ namespace Utility
             for (auto& superblock : m_superblocks)
             {
                 delete[] superblock.pBase;
+                assert(superblock.Refcount == 0);
             }
         }
 

@@ -73,15 +73,15 @@ namespace GameOfLife { namespace Renderers {
 
         for (auto it = state.begin(); it != state.end(); ++it)
         {
-            const auto& subgrid = it->second;
-            const int64_t xMin = subgrid.XMin();
-            const int64_t yMin = subgrid.YMin();
+            const auto& spSubgrid = it->second;
+            const int64_t xMin = spSubgrid->XMin();
+            const int64_t yMin = spSubgrid->YMin();
 
-            for (int64_t y = yMin; y < yMin + subgrid.Height(); ++y)
+            for (int64_t y = yMin; y < yMin + spSubgrid->Height(); ++y)
             {
-                for (int64_t x = xMin; x < xMin + subgrid.Width(); ++x)
+                for (int64_t x = xMin; x < xMin + spSubgrid->Width(); ++x)
                 {
-                    if (subgrid.GetCellState(x, y))
+                    if (spSubgrid->GetCellState(x, y))
                     {
                         int cursorX = static_cast<int>(x - state.XMin());
                         int cursorY = static_cast<int>(y - state.YMin());

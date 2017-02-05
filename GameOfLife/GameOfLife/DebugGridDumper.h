@@ -18,6 +18,7 @@ namespace GameOfLife
         static void DumpGrid(
             uint32_t generation,
             SubGrid::CoordinateType t,
+            const RectangularGrid& bounds,
             uint8_t const* pBefore,
             uint8_t const* pAfter
         );

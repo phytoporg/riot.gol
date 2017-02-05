@@ -7,6 +7,10 @@
 
 namespace
 {
+    //
+    // Gets the adjacency index representing the "opposite" direction
+    // of a given neighbor. top -> bottom, left -> right, etc.
+    //
     GameOfLife::AdjacencyIndex GetReflectedAdjacencyIndex(
         const GameOfLife::AdjacencyIndex& index
         )
@@ -22,8 +26,8 @@ namespace
 
     struct LookupValue
     {
-        GameOfLife::SubGrid* pSubGrid;
-        GameOfLife::SubGrid* Neighbors[8];
+        GameOfLife::SubGridPtr spSubGrid;
+        GameOfLife::SubGrid* ppNeighbors[8];
     };
 }
 
@@ -31,7 +35,7 @@ namespace GameOfLife
 {
     struct SubGridGraph::Pimpl
     {
-        std::unordered_map<SubGrid::CoordinateType, LookupValue> VertexLookup;
+        std::unordered_map<SubGrid::CoordinateType, LookupValue> SubgridLookup;
     };
 
     SubGridGraph::SubGridGraph()
@@ -44,20 +48,27 @@ namespace GameOfLife
     SubGridGraph::~SubGridGraph() = default;
 
     bool SubGridGraph::GetNeighborArray(
-        const SubGrid& subgrid,
-        /* out */SubGrid**& ppNeighbors
-        ) const
+        SubGrid const* pSubgrid,
+        /* Out */ SubGrid**& ppNeighbors
+    ) const
     {
-        assert(ppNeighbors);
-
-        auto it = m_spPimpl->VertexLookup.find(subgrid.GetCoordinates());
-        if (it == m_spPimpl->VertexLookup.end())
+        const SubGrid::CoordinateType& Coordinates = pSubgrid->GetCoordinates();
+        auto it = m_spPimpl->SubgridLookup.find(Coordinates);
+        if (it == m_spPimpl->SubgridLookup.end())
         {
             return false;
         }
 
-        ppNeighbors = it->second.Neighbors;
+        ppNeighbors = it->second.ppNeighbors;
         return true;
+    }
+
+    bool SubGridGraph::GetNeighborArray(
+        const SubGridPtr spSubgrid,
+        /* out */ SubGrid**& ppNeighbors
+        ) const
+    {
+        return GetNeighborArray(spSubgrid.get(), ppNeighbors);
     }
 
     AdjacencyIndex SubGridGraph::GetIndexFromNeighborPosition(
@@ -102,93 +113,120 @@ namespace GameOfLife
         return LUT[index];
     }
 
-    bool SubGridGraph::AddVertex(const SubGrid& subgrid)
+    bool SubGridGraph::AddSubgrid(SubGridPtr spSubgrid)
     {
-        const auto Coords = subgrid.GetCoordinates();
+        const auto& Coordinates = spSubgrid->GetCoordinates();
         
-        auto it = m_spPimpl->VertexLookup.find(Coords);
-        if (it != m_spPimpl->VertexLookup.end()) { return false; }
+        auto it = m_spPimpl->SubgridLookup.find(Coordinates);
+        if (it != m_spPimpl->SubgridLookup.end()) { return false; }
 
-        m_spPimpl->VertexLookup[Coords] = { const_cast<SubGrid*>(&subgrid), {} };
+        m_spPimpl->SubgridLookup[Coordinates] = { spSubgrid, {} };
 
         return true;
     }
 
-    bool SubGridGraph::RemoveVertex(SubGrid& subgrid)
+    bool SubGridGraph::AddSubgrids(const std::vector<SubGridPtr>& subgridPtrs)
     {
-        const auto Coords = subgrid.GetCoordinates();
+        //
+        // First pass checks for any duplicates. This is all-or-nothing.
+        //
+        for (auto& spSubgrid : subgridPtrs)
+        {
+            const auto& Coordinates = spSubgrid->GetCoordinates();
+            auto it = m_spPimpl->SubgridLookup.find(Coordinates);
+            if (it != m_spPimpl->SubgridLookup.end()) { return false; }
+        }
+        
+        for (auto& spSubgrid : subgridPtrs)
+        {
+            const auto& Coordinates = spSubgrid->GetCoordinates();
+            m_spPimpl->SubgridLookup[Coordinates] = { spSubgrid, {} };
+        }
 
-        auto it = m_spPimpl->VertexLookup.find(Coords);
-        if (it == m_spPimpl->VertexLookup.end()) { return false; }
+        return true;
+    }
+
+    bool SubGridGraph::RemoveSubgrid(const SubGridPtr& spSubgrid)
+    {
+        const auto Coordinates = spSubgrid->GetCoordinates();
+
+        auto it = m_spPimpl->SubgridLookup.find(Coordinates);
+        if (it == m_spPimpl->SubgridLookup.end()) { return false; }
 
         //
         // When we remove a vertex we've got to remove its edges as well.
         //
         for (int i = 0; i < AdjacencyIndex::MAX; ++i)
         {
-            auto& pNeighbor = it->second.Neighbors[i];
+            SubGrid*& pNeighbor = it->second.ppNeighbors[i];
             if (pNeighbor)
             {
                 const AdjacencyIndex ReflectedIndex =
                     GetReflectedAdjacencyIndex(static_cast<AdjacencyIndex>(i));
 
                 pNeighbor->ClearBorder(ReflectedIndex);
-                subgrid.ClearBorder(static_cast<AdjacencyIndex>(i));
+                spSubgrid->ClearBorder(static_cast<AdjacencyIndex>(i));
                 
-                const auto& NeighborCoords = pNeighbor->GetCoordinates();
-                auto& pNeighborNeighbor = m_spPimpl->VertexLookup[NeighborCoords].Neighbors[ReflectedIndex];
+                const SubGrid::CoordinateType& NeighborCoords = pNeighbor->GetCoordinates();
+                SubGrid*& pNeighborNeighbor = m_spPimpl->SubgridLookup[NeighborCoords].ppNeighbors[ReflectedIndex];
 
                 //
                 // Asymmetry in the graph. Shouldn't happen.
                 //
-                assert(pNeighborNeighbor == it->second.pSubGrid);
+                assert(pNeighborNeighbor == it->second.spSubGrid.get());
 
+                //
+                // Clear respective entries for either subgrid.
+                //
                 pNeighborNeighbor = nullptr;
                 pNeighbor = nullptr;
             }
         }
 
-        m_spPimpl->VertexLookup.erase(Coords);
+        m_spPimpl->SubgridLookup.erase(Coordinates);
 
         return true;
     }
 
-    bool SubGridGraph::QueryVertex(
+    bool SubGridGraph::QuerySubgrid(
         const SubGrid::CoordinateType& coord,
-        SubGrid** ppSubGrid = nullptr
+        SubGridPtr& spSubGrid
         ) const 
     {
-        auto it = m_spPimpl->VertexLookup.find(coord); 
-        if (it == m_spPimpl->VertexLookup.end())
+        auto it = m_spPimpl->SubgridLookup.find(coord); 
+        if (it == m_spPimpl->SubgridLookup.end())
         {
             return false;
         }
 
-        if (ppSubGrid)
-        {
-            *ppSubGrid = it->second.pSubGrid;
-        }
+        spSubGrid = it->second.spSubGrid;
 
         return true;
     }
 
+    bool SubGridGraph::QuerySubgrid(const SubGrid::CoordinateType& coord) const 
+    {
+        auto it = m_spPimpl->SubgridLookup.find(coord); 
+        return it != m_spPimpl->SubgridLookup.end();
+    }
+
     bool SubGridGraph::AddEdge(
-        const SubGrid& subgrid1,
-        const SubGrid& subgrid2,
+        SubGridPtr spSubgrid1,
+        SubGridPtr spSubgrid2,
         AdjacencyIndex adjacency
         )
     {
-        auto it1 = m_spPimpl->VertexLookup.find(subgrid1.GetCoordinates());
-        if (it1 == m_spPimpl->VertexLookup.end()) { return false; }
+        auto it1 = m_spPimpl->SubgridLookup.find(spSubgrid1->GetCoordinates());
+        if (it1 == m_spPimpl->SubgridLookup.end()) { return false; }
 
-        auto it2 = m_spPimpl->VertexLookup.find(subgrid2.GetCoordinates());
-        if (it2 == m_spPimpl->VertexLookup.end()) { return false; }
+        auto it2 = m_spPimpl->SubgridLookup.find(spSubgrid2->GetCoordinates());
+        if (it2 == m_spPimpl->SubgridLookup.end()) { return false; }
 
         const AdjacencyIndex OneToTwoIndex = adjacency;
         const AdjacencyIndex TwoToOneIndex = GetReflectedAdjacencyIndex(adjacency);
 
-        it1->second.Neighbors[OneToTwoIndex] = const_cast<SubGrid*>(&subgrid2);
-        it2->second.Neighbors[TwoToOneIndex] = const_cast<SubGrid*>(&subgrid1);
+        it1->second.ppNeighbors[OneToTwoIndex] = spSubgrid2.get();
+        it2->second.ppNeighbors[TwoToOneIndex] = spSubgrid1.get();
 
         return true;
     }

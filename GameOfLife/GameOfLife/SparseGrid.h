@@ -15,13 +15,24 @@
 #include <vector>
 #include <ostream>
 
+//
+// Forward declarations
+//
+
+namespace Utility
+{
+    template <size_t N> class AlignedMemoryPool;
+}
+
 namespace GameOfLife
 {
     class SparseGrid : public RectangularGrid
     {
     public:
-        SparseGrid(const std::vector<Cell>& initialState);
-        ~SparseGrid();
+        SparseGrid(
+            const std::vector<Cell>& initialState,
+            Utility::AlignedMemoryPool<64>& memoryPool
+        );
 
         bool AdvanceGeneration();
 
@@ -52,7 +63,7 @@ namespace GameOfLife
         //
         SubGridGraph m_gridGraph;
 
-        Utility::AlignedMemoryPool<64> m_alignedPool;
+        Utility::AlignedMemoryPool<64>& m_alignedPool;
         uint32_t m_generationCount;
     };
 }

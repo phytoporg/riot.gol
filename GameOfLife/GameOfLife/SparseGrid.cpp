@@ -1,5 +1,7 @@
 #include "SparseGrid.h"
 
+#include <Utility/AlignedMemoryPool.h>
+
 #include <limits>
 #include <cassert>
 #include <algorithm>
@@ -23,24 +25,38 @@ namespace
         const int64_t dx = neighborDelta.first;
         const int64_t dy = neighborDelta.second;
 
-        int64_t neighborX = subgrid.GetCoordinates().first + dx * GameOfLife::SubGrid::SUBGRID_WIDTH;
-        if (neighborX > XMax)        
+        const int64_t SubgridMinX = subgrid.GetCoordinates().first;
+        const int64_t SubgridMinY = subgrid.GetCoordinates().second;
+
+        int64_t neighborX = SubgridMinX + dx * GameOfLife::SubGrid::SUBGRID_WIDTH;
+        if (neighborX >= XMax)        
         { 
             neighborX = stateDimensions.XMin(); 
         }
         else if (neighborX < stateDimensions.XMin()) {
             //
             // The divide and multiply might look redundant, but the divide serves
-            // also to shave off any remainder.
+            // also to shave off any remainder. This expression puts neighborX at
+            // the x-coordinate of the left of the right-most subgrid in the full
+            // state space.
             //
             neighborX =
                 stateDimensions.XMin() +
                 (stateDimensions.Width() / GameOfLife::SubGrid::SUBGRID_WIDTH) *
                 GameOfLife::SubGrid::SUBGRID_WIDTH; 
+
+            if (neighborX >= XMax)
+            {
+                //
+                // If neighborX is still too large, then the full world is only
+                // one subgrid wide and neighborX == X
+                //
+                neighborX = SubgridMinX;
+            }
         }
 
-        int64_t neighborY = subgrid.GetCoordinates().second + dy * GameOfLife::SubGrid::SUBGRID_HEIGHT;
-        if (neighborY > YMax)        
+        int64_t neighborY = SubgridMinY + dy * GameOfLife::SubGrid::SUBGRID_HEIGHT;
+        if (neighborY >= YMax)        
         { 
             neighborY = stateDimensions.YMin(); 
         }
@@ -49,49 +65,34 @@ namespace
             neighborY = stateDimensions.YMin() + 
                 (stateDimensions.Height() / GameOfLife::SubGrid::SUBGRID_HEIGHT) *
                 GameOfLife::SubGrid::SUBGRID_HEIGHT; 
+
+            if (neighborY >= YMax)
+            {
+                //
+                // Same as in x-case. If neighborY is still too large, neighborY == Y
+                //
+                neighborY = SubgridMinY;
+            }
         }
 
         return std::make_pair(neighborX, neighborY);
     }
 
-    GameOfLife::RectangularGrid
-    GetNeighborBounds(
-        const GameOfLife::SubGrid& subgrid,
-        const GameOfLife::RectangularGrid& stateDimensions,
-        const GameOfLife::SubGrid::CoordinateType neighborDelta
-        )
-    {
-        const auto MinCoordinates = GetNeighborCoordinates(subgrid, stateDimensions, neighborDelta);
-
-        const int64_t XMax = stateDimensions.XMin() + stateDimensions.Width();
-        int64_t width = GameOfLife::SubGrid::SUBGRID_WIDTH;
-        if (width + MinCoordinates.first > XMax)
-        {
-            width = XMax - MinCoordinates.first;
-        }
-
-        const int64_t YMax = stateDimensions.YMin() + stateDimensions.Height();
-        int64_t height = GameOfLife::SubGrid::SUBGRID_HEIGHT;
-        if (height + MinCoordinates.second > YMax)
-        {
-            height = YMax - MinCoordinates.second;
-        }
-
-        return GameOfLife::RectangularGrid(
-            MinCoordinates.first,
-            width,
-            MinCoordinates.second,
-            height
-            );
-    }
-
+    //
+    // Given a subgrid, the full state dimensions and the offset vector of 
+    // a neighbor (neighborDelta), return the starting coordinates and dimensions
+    // of the neighbor which would exist at subgridposition.xy + neighbordelta.xy.
+    //
+    // This accounts for wrapping in the full state; note that subgrids may self-wrap
+    // if they have no neighbors along a particular axis.
+    //
     void 
     MaybeCreateNewNeighbors(
         Utility::AlignedMemoryPool<64>& memoryPool,
-        const GameOfLife::SubGrid& subgrid,
+        const GameOfLife::SubGridPtr& spSubgrid,
         const GameOfLife::SparseGrid& state,
         GameOfLife::SubGridGraph& gridGraph,
-        std::vector<GameOfLife::SubGrid>& subgrids
+        std::vector<GameOfLife::SubGridPtr>& subgridPtrs
         )
     {
         using namespace GameOfLife;
@@ -99,74 +100,143 @@ namespace
         {
             const auto Adjacency = static_cast<AdjacencyIndex>(i);
             const auto NeighborOffset = SubGridGraph::GetNeighborPositionFromIndex(Adjacency);
-            if (subgrid.IsNextGenerationNeighbor(Adjacency))
+            if (spSubgrid->IsNextGenerationNeighbor(Adjacency))
             {
-                const auto SubgridBounds = GetNeighborBounds(subgrid, state, NeighborOffset);
+                const SubGrid::CoordinateType NeighborCoords = GetNeighborCoordinates(*spSubgrid, state, NeighborOffset);
                 
-                const SubGrid::CoordinateType SubgridCoords = std::make_pair(SubgridBounds.XMin(), SubgridBounds.YMin());
-                auto it = std::find_if(subgrids.begin(), subgrids.end(), [&SubgridCoords](const SubGrid& sg)
+                SubGridPtr spNeighbor;
+                if (gridGraph.QuerySubgrid(NeighborCoords, spNeighbor))
                 {
-                    return sg.GetCoordinates() == SubgridCoords;
-                }); 
-
-                SubGrid* pNeighbor;
-                if (it == subgrids.end())
-                {
-                    uint8_t* ppBuffers[2] = { memoryPool.Allocate(), memoryPool.Allocate() };
-                    subgrids.emplace_back(
-                        ppBuffers, gridGraph,
-                        SubgridBounds.XMin(), SubgridBounds.Width(),
-                        SubgridBounds.YMin(), SubgridBounds.Height(),
-                        subgrid.GetGeneration()
-                        );
-                    pNeighbor = &subgrids.back();
+                    //
+                    // Nothing to do here, spNeighbor is set.
+                    //
                 }
                 else
                 {
-                    pNeighbor = &(*it);
+                    auto it =
+                        std::find_if(subgridPtrs.begin(), subgridPtrs.end(), [&NeighborCoords](const SubGridPtr& spSubgrid)
+                        {
+                            return spSubgrid->GetCoordinates() == NeighborCoords;
+                        }); 
+
+                    if (it == subgridPtrs.end())
+                    {
+                        subgridPtrs.emplace_back(
+                            std::make_shared<SubGrid>(
+                                memoryPool, gridGraph,
+                                NeighborCoords.first, NeighborCoords.second,
+                                spSubgrid->GetGeneration()
+                            ));
+                        spNeighbor = subgridPtrs.back();
+                    }
+                    else
+                    {
+                        spNeighbor = *it;
+                    }
                 }
 
-                pNeighbor->CopyBorder(subgrid, GetReflectedAdjacencyIndex(Adjacency));
+                spNeighbor->CopyBorder(*spSubgrid, GetReflectedAdjacencyIndex(Adjacency));
             }
         }
     }
 
     void MaybeRetireSubgrid(
         uint32_t numCells,
-        GameOfLife::SubGrid& subgrid,
-        std::vector<GameOfLife::SubGrid>& subgrids
+        GameOfLife::SubGridPtr spSubgrid,
+        std::vector<GameOfLife::SubGridPtr>& subgridPtrs
         )
     {
-        if (!numCells && !subgrid.HasBorderCells())
+        if (!numCells && !spSubgrid->HasBorderCells())
         {
-            subgrids.push_back(subgrid);
+            subgridPtrs.push_back(spSubgrid);
         }
     }
 }
 
 namespace GameOfLife
 {
-    SparseGrid::SparseGrid(const std::vector<Cell>& initialState)
-        : m_alignedPool((SubGrid::SUBGRID_WIDTH + 2) * (SubGrid::SUBGRID_HEIGHT + 2), 32),
-          m_generationCount(0)
+    SparseGrid::SparseGrid(
+        const std::vector<Cell>& initialCells,
+        Utility::AlignedMemoryPool<64>& memoryPool
+    )
+        : m_alignedPool(memoryPool), m_generationCount(0)
     {
-        assert(!initialState.empty());
+        assert(!initialCells.empty());
+        for (const Cell& cell : initialCells)
+        {
+            int64_t subgridMinX;
+            int64_t subgridMinY;
+            if (cell.X >= 0)
+            {
+                subgridMinX = cell.X - (cell.X % SubGrid::SUBGRID_WIDTH);
+            }
+            else
+            {
+                subgridMinX = cell.X - (SubGrid::SUBGRID_WIDTH + (cell.X % SubGrid::SUBGRID_WIDTH));
+            }
+
+            if (cell.Y >= 0)
+            {
+                subgridMinY = cell.Y - (cell.Y % SubGrid::SUBGRID_HEIGHT);
+            }
+            else
+            {
+                subgridMinY = cell.Y - (SubGrid::SUBGRID_HEIGHT + (cell.Y % SubGrid::SUBGRID_HEIGHT));
+            }
+
+            SubGridPtr spSubgrid;
+            if (!m_gridGraph.QuerySubgrid(std::make_pair(subgridMinX, subgridMinY), /* out */spSubgrid))
+            {
+                auto spSubgrid = std::make_shared<SubGrid>(
+                        m_alignedPool, m_gridGraph,
+                        subgridMinX, subgridMinY
+                    );
+                spSubgrid->RaiseCell(cell.X, cell.Y);
+                if (!m_subgridStorage.Add(spSubgrid))
+                {
+                    assert(false);
+                    throw std::exception("Unrecoverable: Could not add new subgrid to storage!");
+                }
+
+                if (!m_gridGraph.AddSubgrid(spSubgrid))
+                {
+                    assert(false);
+                    throw std::exception("Unrecoverable: Could not add new subgrid to graph!");
+                }
+            }
+            else
+            {
+                spSubgrid->RaiseCell(cell.X, cell.Y);
+            }
+        }
+
+        if (m_subgridStorage.GetSize() == 0)
+        {
+            //
+            // No subgrids makes for a pretty boring simulation. The program entry point
+            // should have caught this, so just throw.
+            //
+
+            throw std::exception("Unrecoverable: No subgrids created.");
+        }
+
         int64_t xMin = std::numeric_limits<int64_t>::max();
         int64_t xMax = std::numeric_limits<int64_t>::min();
         int64_t yMin = std::numeric_limits<int64_t>::max();
         int64_t yMax = std::numeric_limits<int64_t>::min();
 
         // 
-        // First set state dimensions to reign in subgrids which may otherwise
-        // stretch out of bounds.
+        // Determine the dimensions of the world space based on the constituent
+        // subgrids, assuming uniform size for all subgrids including the edges.
         //
 
-        for (const auto& state : initialState)
+        for (auto it = m_subgridStorage.begin(); it != m_subgridStorage.end(); ++it)
         {
-            if (state.X < xMin) { xMin = state.X; }
-            if (state.X > xMax) { xMax = state.X; }
-            if (state.Y < yMin) { yMin = state.Y; }
-            if (state.Y > yMax) { yMax = state.Y; }
+            const SubGridPtr& spSubgrid = it->second;
+            if (spSubgrid->XMin() < xMin) { xMin = spSubgrid->XMin(); }
+            if (spSubgrid->XMin() > xMax) { xMax = spSubgrid->XMin(); }
+            if (spSubgrid->YMin() < yMin) { yMin = spSubgrid->YMin(); }
+            if (spSubgrid->YMin() > yMax) { yMax = spSubgrid->YMin(); }
         }
 
         m_xMin   = xMin;
@@ -175,93 +245,81 @@ namespace GameOfLife
         m_yMin   = yMin;
         m_height = std::max(yMax - yMin + 1, SubGrid::SUBGRID_HEIGHT);
 
-        for (const auto& state : initialState)
-        {
-            const int64_t SubgridX = (state.X - m_xMin) / SubGrid::SUBGRID_WIDTH;
-            const int64_t SubgridY = (state.Y - m_yMin) / SubGrid::SUBGRID_HEIGHT;
+        //
+        // Initialize subgrid neighbor relationships in the graph and create new
+        // neighbors if necessary.
+        //
 
-            const int64_t SubgridMinX = m_xMin + SubgridX * SubGrid::SUBGRID_WIDTH;
-            const int64_t SubgridMinY = m_yMin + SubgridY * SubGrid::SUBGRID_HEIGHT;
-
-            SubGrid* pSubGrid = nullptr;
-            if (!m_gridGraph.QueryVertex(std::make_pair(SubgridMinX, SubgridMinY), &pSubGrid))
-            {
-                uint8_t* ppBuffers[2] = { m_alignedPool.Allocate(), m_alignedPool.Allocate() };
-                SubGrid subgrid(
-                    ppBuffers,
-                    m_gridGraph,
-                    SubgridMinX, std::min(SubGrid::SUBGRID_WIDTH, xMax - SubgridMinX + 1),
-                    SubgridMinY, std::min(SubGrid::SUBGRID_HEIGHT, yMax - SubgridMinY + 1)
-                    );
-                subgrid.RaiseCell(state.X, state.Y);
-                m_subgridStorage.Add(subgrid, m_gridGraph);
-            }
-            else
-            {
-                pSubGrid->RaiseCell(state.X, state.Y);
-            }
-        }
-
-        if (m_subgridStorage.GetSize() == 1)
-        {
-            return;
-        }
-
-        std::vector<SubGrid> subgridsToAdd;
+        std::vector<SubGridPtr> subgridsToAdd;
         for (auto it = m_subgridStorage.begin(); it != m_subgridStorage.end(); ++it)
         {
-            auto& subgrid = it->second;
-            MaybeCreateNewNeighbors(m_alignedPool, subgrid, *this, m_gridGraph, subgridsToAdd);
+            SubGridPtr spSubGrid = it->second;
+            MaybeCreateNewNeighbors(m_alignedPool, spSubGrid, *this, m_gridGraph, subgridsToAdd);
         }
 
         const size_t NumAdded = subgridsToAdd.size();
         if (NumAdded)
         {
-            m_subgridStorage.Add(subgridsToAdd, m_gridGraph);
+            //
+            // We've got a nasty bug somewhere if there are any duplicates, so fail
+            // hard if that's the case.
+            //
+            if (!m_subgridStorage.Add(subgridsToAdd))
+            {
+                assert(false);
+                throw std::exception("Uncrecoverable: Could not add new subgrids to storage!");
+            }
+
+            if (!m_gridGraph.AddSubgrids(subgridsToAdd))
+            {
+                assert(false);
+                throw std::exception("Uncrecoverable: Could not add new subgrids to graph!");
+            }
         }
 
         PopulateAdjacencyInfo(m_subgridStorage.begin(), m_subgridStorage.end());
     }
 
-    SparseGrid::~SparseGrid()
-    {
-        for (auto& subgrids : m_subgridStorage)
-        {
-            subgrids.second.Cleanup(m_alignedPool);
-        }
-    }
-
     bool SparseGrid::AdvanceGeneration()
     {
-        std::vector<SubGrid> subgridsToAdd;
-        std::vector<SubGrid> subgridsToRemove;
+        std::vector<SubGridPtr> subgridsToAdd;
+        std::vector<SubGridPtr> subgridsToRemove;
         for (auto it = m_subgridStorage.begin(); it != m_subgridStorage.end(); ++it)
         {
-            auto& subgrid = it->second;
-            const uint32_t NumCells = subgrid.AdvanceGeneration();
+            auto spSubgrid = it->second;
+            const uint32_t NumCells = spSubgrid->AdvanceGeneration();
 
-            MaybeCreateNewNeighbors(m_alignedPool, subgrid, *this, m_gridGraph, subgridsToAdd);
-            MaybeRetireSubgrid(NumCells, subgrid, subgridsToRemove);
+            MaybeCreateNewNeighbors(m_alignedPool, spSubgrid, *this, m_gridGraph, subgridsToAdd);
+            MaybeRetireSubgrid(NumCells, spSubgrid, subgridsToRemove);
         }
 
         const size_t NumRemoved = subgridsToRemove.size();
         for (size_t i = 0; i < NumRemoved; i++)
         {
-            auto& subgrid = subgridsToRemove[i];
-            m_gridGraph.RemoveVertex(subgrid);
-            subgrid.Cleanup(m_alignedPool);
-            m_subgridStorage.Remove(subgrid);
+            SubGridPtr spSubgrid = subgridsToRemove[i];
+            m_gridGraph.RemoveSubgrid(spSubgrid);
+            m_subgridStorage.Remove(spSubgrid);
         }
 
         const size_t NumAdded = subgridsToAdd.size();
         if (NumAdded)
         {
-            m_subgridStorage.Add(subgridsToAdd, m_gridGraph);
+            if (!m_subgridStorage.Add(subgridsToAdd))
+            {
+                assert(false);
+                throw std::exception("Unrecoverable: Could not add new subgrid to storage!");
+            }
+
+            if (!m_gridGraph.AddSubgrids(subgridsToAdd))
+            {
+                assert(false);
+                throw std::exception("Unrecoverable: Could not add new subgrid to graph!");
+            }
+
             PopulateAdjacencyInfo(m_subgridStorage.begin(), m_subgridStorage.end());
         }
          
         m_generationCount++;
-
         return true;
     }
 
@@ -270,27 +328,23 @@ namespace GameOfLife
         SubgridStorage::const_iterator end
         )
     {
-        //
-        // TODO: Only assign adjacency to neighbors whose
-        // cells will impact one another.
-        //
         const int64_t xMax = m_xMin + m_width;
         const int64_t yMax = m_yMin + m_height;
 
         for (auto it = begin; it != end; ++it)
         {
-            const auto& subgrid = it->second;
-            const auto SubgridCoordinates = std::make_pair(subgrid.XMin(), subgrid.YMin());
+            const SubGridPtr spSubgrid = it->second;
+            const auto SubgridCoordinates = std::make_pair(spSubgrid->XMin(), spSubgrid->YMin());
             for (int i = 0; i < AdjacencyIndex::MAX; i++)
             {
                 const AdjacencyIndex Adjacency = static_cast<AdjacencyIndex>(i);
                 const auto Delta = SubGridGraph::GetNeighborPositionFromIndex(Adjacency);
-                const auto NeighborCoordinates = GetNeighborCoordinates(subgrid, *this, Delta);
+                const auto NeighborCoordinates = GetNeighborCoordinates(*spSubgrid, *this, Delta);
 
-                SubGrid* pNeighbor;
-                if (m_gridGraph.QueryVertex(NeighborCoordinates, &pNeighbor))
+                SubGridPtr spNeighbor;
+                if (m_gridGraph.QuerySubgrid(NeighborCoordinates, spNeighbor))
                 {
-                    m_gridGraph.AddEdge(subgrid, *pNeighbor, Adjacency);
+                    m_gridGraph.AddEdge(spSubgrid, spNeighbor, Adjacency);
                 }
             }
         }
@@ -304,16 +358,16 @@ namespace GameOfLife
 
         for (auto it = grid.begin(); it != grid.end(); ++it)
         {
-            const auto& Subgrid = it->second;
-            out << "(" << Subgrid.XMin() << "," << Subgrid.YMin() << "," << Subgrid.Width() << "," << Subgrid.Height() << ")\n";
+            const SubGridPtr& spSubgrid = it->second;
+            out << "(" << spSubgrid->XMin() << "," << spSubgrid->YMin() << "," << spSubgrid->Width() << "," << spSubgrid->Height() << ")\n";
 
-            const int64_t YMax = Subgrid.YMin() + Subgrid.Height();
-            const int64_t XMax = Subgrid.XMin() + Subgrid.Width();
-            for (int64_t y = Subgrid.YMin(); y < YMax; y++)
+            const int64_t YMax = spSubgrid->YMin() + spSubgrid->Height();
+            const int64_t XMax = spSubgrid->XMin() + spSubgrid->Width();
+            for (int64_t y = spSubgrid->YMin(); y < YMax; y++)
             {
-                for (int64_t x = Subgrid.XMin(); x < XMax; x++)
+                for (int64_t x = spSubgrid->XMin(); x < XMax; x++)
                 {
-                    if (Subgrid.GetCellState(x, y))
+                    if (spSubgrid->GetCellState(x, y))
                     {
                         out << "1";
                     }

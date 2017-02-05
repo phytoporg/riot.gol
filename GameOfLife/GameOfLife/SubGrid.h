@@ -13,15 +13,33 @@
 #include <memory>
 #include <vector>
 
+namespace Utility
+{
+    template <size_t N> class AlignedMemoryPool;
+}
+
 namespace GameOfLife
 {
     class SubGridGraph;
 
+    //
+    // This class represents a single static, rectangular subregion 
+    // within world space. The intent is for this class only to indirectly 
+    // refer to cell grid information, which lives in the SubgridStorage
+    // data structure.
+    //
     class SubGrid : public RectangularGrid
     {
     public:
+        //
+        // Type for describing (x,y) world-space coordinates.
+        //
         typedef std::pair<int64_t, int64_t> CoordinateType;
 
+        //
+        // Type for the vertex buffer ultimately used for rendering living
+        // cells within the subgrid.
+        //
         struct VertexType
         {
             VertexType(int64_t x, int64_t y) :
@@ -30,46 +48,55 @@ namespace GameOfLife
             float Y;
         };
 
+        // 
+        // All subgrids will have these logical dimensions or, in the case where
+        // subgrids live on the edge of a world space whose dimensions is not an
+        // even multiple of SUBGRID_WIDTH/HEIGHT, may possibly be smaller.
+        //
+        // A note that the actual cell grid buffers have one cell of padding in
+        // each direction to store cell information from neighboring subgrids.
+        //
         static const int64_t SUBGRID_WIDTH = 30;
         static const int64_t SUBGRID_HEIGHT = 30;
 
-        SubGrid();
         SubGrid(
-            uint8_t* ppGrids[2],
+            Utility::AlignedMemoryPool<64>& memoryPool, 
             SubGridGraph& graph,
-            int64_t xmin, int64_t width,
-            int64_t ymin, int64_t height,
+            int64_t xmin, int64_t ymin,
             uint32_t generation = 0
             );
+        ~SubGrid();
 
         //
-        // Free resources on removal.
-        //
-        template<size_t N>
-        void Cleanup(Utility::AlignedMemoryPool<N>& pool)
-        {
-            pool.Free(m_pCellGrids[0]);
-            m_pCellGrids[0] = nullptr;
-            pool.Free(m_pCellGrids[1]);
-            m_pCellGrids[1] = nullptr;
-        }
-
-        //
-        // (x, y) coordinates are somewhat toroidal due to ghost buffers.
+        // (x, y) coordinates are toroidal due to ghost buffers. x, y parameters
+        // are in world space.
         //
         void RaiseCell(int64_t x, int64_t y);
         void KillCell(int64_t x, int64_t y);
-
         bool GetCellState(int64_t x, int64_t y) const;
+
+        //
+        // Retrieves this SubGrid's upper-left cell coordinates.
+        //
         const CoordinateType& GetCoordinates() const;
+
+        //
+        // Retrieve this generation's vertex data for rendering. Contains
+        // only living cell coordinates in world space.
+        //
         const std::vector<VertexType>& GetVertexData() const;
 
+        //
+        // Returns true if any border cells are living.
+        //
         bool HasBorderCells() const;
          
         //
-        // Returns the number of cells alive in the next generation
+        // Advances the cell states to the next gen and returns the number of living
+        // cells produced.
         //
         uint32_t AdvanceGeneration();
+
         uint32_t GetGeneration() const { return m_generation; }
 
         //
@@ -91,18 +118,44 @@ namespace GameOfLife
         // copies cheap. Place data on the heap; just track pointers in here.
         //
         uint8_t* m_pCellGrids[2];
+        
+        //
+        // Reference to the memory pool for managing cell grid memory.
+        // Used to allocate ping-pong cell grid buffers in the constructor,
+        // frees grid buffers in the destructor.
+        //
+        Utility::AlignedMemoryPool<64>& m_memoryPool;
+
+        //
+        // Pointer to the active cell grid.
+        //
         uint8_t* m_pCurrentCellGrid;
 
+        //
+        // Internal equivalents to the public versions above which may target
+        // a particular cell grid, hence the leading parameter in each.
+        //
         bool GetCellState(uint8_t const* pGrid, int64_t x, int64_t y) const;
         void RaiseCell(uint8_t* pGrid, int64_t x, int64_t y);
         void KillCell(uint8_t* pGrid, int64_t x, int64_t y);
 
+        //
+        // Copies a row from a subgrid to another.
+        //
         static void CopyRowFrom(
             const SubGrid& src, uint8_t const* pSrcGrid,
             const SubGrid& dst, uint8_t* pDstGrid,
             int64_t ySrc, int64_t yDst
         );
+
+        //
+        // Zeroes out a row in the given cell grid buffer.
+        //
         void ClearRow(uint8_t* pBuffer, int64_t row);
+
+        //
+        // Equivalent operations as above, but performed on columns.
+        //
         static void CopyColumnFrom(
             const SubGrid& src, uint8_t const* pSrcGrid,
             const SubGrid& dst, uint8_t* pDstGrid,
@@ -110,13 +163,32 @@ namespace GameOfLife
         );
         void ClearColumn(uint8_t* pBuffer, int64_t col);
 
+        //
+        // Get offset into the current cell grid buffer where (x,y) are
+        // in world coordinates.
+        //
         size_t GetOffset(int64_t x, int64_t y) const;
 
+        //
+        // Starting (x,y) world-space coordinates for this subgrid.
+        //
         CoordinateType m_coordinates;
+
+        //
+        // This subgrid's most recently completed generation. Should be
+        // at most behind by 1 generation relative to all other subgrids.
+        //
         uint32_t       m_generation;
         SubGridGraph*  m_pGridGraph;
 
+        //
+        // Subgrid width, including ghost buffer space.
+        //
         int64_t m_bufferWidth;
+
+        //
+        // Subgrid height, including ghost buffer space.
+        //
         int64_t m_bufferHeight;
 
         //
@@ -124,4 +196,10 @@ namespace GameOfLife
         //
         std::vector<VertexType> m_vertexData;
     };
+
+    //
+    // Saves some typing. These get copied around a lot, so better to manage
+    // their lifetimes with smart pointers.
+    //
+    typedef std::shared_ptr<SubGrid> SubGridPtr;
 }
