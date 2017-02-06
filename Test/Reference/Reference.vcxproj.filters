@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="ReferenceGameOfLife">
+      <UniqueIdentifier>{a8e85971-fb67-4793-8ef4-f67f3f7cb228}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ReferenceGameOfLife\Cell.h">
+      <Filter>ReferenceGameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="ReferenceGameOfLife\ConsoleStateRenderer.h">
+      <Filter>ReferenceGameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="ReferenceGameOfLife\FileStateRenderer.h">
+      <Filter>ReferenceGameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="ReferenceGameOfLife\GameRunner.h">
+      <Filter>ReferenceGameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="ReferenceGameOfLife\InitialState.h">
+      <Filter>ReferenceGameOfLife</Filter>
+    </ClInclude>
+    <ClInclude Include="ReferenceGameOfLife\State.h">
+      <Filter>ReferenceGameOfLife</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ReferenceGameOfLife\ConsoleStateRenderer.cpp">
+      <Filter>ReferenceGameOfLife</Filter>
+    </ClCompile>
+    <ClCompile Include="ReferenceGameOfLife\FileStateRenderer.cpp">
+      <Filter>ReferenceGameOfLife</Filter>
+    </ClCompile>
+    <ClCompile Include="ReferenceGameOfLife\GameRunner.cpp">
+      <Filter>ReferenceGameOfLife</Filter>
+    </ClCompile>
+    <ClCompile Include="ReferenceGameOfLife\State.cpp">
+      <Filter>ReferenceGameOfLife</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+</Project>
