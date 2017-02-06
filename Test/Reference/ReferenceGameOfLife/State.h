@@ -10,7 +10,7 @@
 #include <ostream>
 
 
-namespace GameOfLife
+namespace GoLReference
 {
     class State
     {

@@ -81,6 +81,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)\..\..\GameOfLife</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -111,7 +112,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ReferenceGameOfLife\Cell.h" />
-    <ClInclude Include="ReferenceGameOfLife\ConsoleStateRenderer.h" />
     <ClInclude Include="ReferenceGameOfLife\FileStateRenderer.h" />
     <ClInclude Include="ReferenceGameOfLife\GameRunner.h" />
     <ClInclude Include="ReferenceGameOfLife\InitialState.h" />
@@ -119,7 +119,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="ReferenceGameOfLife\ConsoleStateRenderer.cpp" />
     <ClCompile Include="ReferenceGameOfLife\FileStateRenderer.cpp" />
     <ClCompile Include="ReferenceGameOfLife\GameRunner.cpp" />
     <ClCompile Include="ReferenceGameOfLife\State.cpp" />

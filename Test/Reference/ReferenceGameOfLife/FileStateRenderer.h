@@ -10,12 +10,13 @@
 #include <string>
 #include <fstream>
 
-namespace GameOfLife
+namespace GoLReference
 {
     class FileStateRenderer
     {
     public:
         FileStateRenderer(const std::string& filename);
+        ~FileStateRenderer();
         std::ostream& operator<<(const State& state);
 
     private:

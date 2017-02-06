@@ -15,10 +15,6 @@ namespace
         const GameOfLife::SubGrid::CoordinateType neighborDelta
         )
     {
-        // 
-        // SparseGrid is toroidal, so account for wrapping.
-        //
-
         const int64_t XMax = stateDimensions.XMin() + stateDimensions.Width();
         const int64_t YMax = stateDimensions.YMin() + stateDimensions.Height();
 
@@ -28,6 +24,9 @@ namespace
         const int64_t SubgridMinX = subgrid.GetCoordinates().first;
         const int64_t SubgridMinY = subgrid.GetCoordinates().second;
 
+        // 
+        // SparseGrid is toroidal, so account for wrapping.
+        //
         int64_t neighborX = SubgridMinX + dx * GameOfLife::SubGrid::SUBGRID_WIDTH;
         if (neighborX < stateDimensions.XMin())
         {
@@ -63,9 +62,9 @@ namespace
     MaybeCreateNewNeighbors(
         Utility::AlignedMemoryPool<64>& memoryPool,
         const GameOfLife::SubGridPtr& spSubgrid,
-        const GameOfLife::SparseGrid& state,
+        const GameOfLife::SparseGrid& sparseGrid,
         GameOfLife::SubGridGraph& gridGraph,
-        std::vector<GameOfLife::SubGridPtr>& subgridPtrs
+        std::vector<GameOfLife::SubGridPtr>& subgridPtrsOut
         )
     {
         using namespace GameOfLife;
@@ -75,32 +74,38 @@ namespace
             const auto NeighborOffset = SubGridGraph::GetNeighborPositionFromIndex(Adjacency);
             if (spSubgrid->IsNextGenerationNeighbor(Adjacency))
             {
-                const SubGrid::CoordinateType NeighborCoords = GetNeighborCoordinates(*spSubgrid, state, NeighborOffset);
+                const SubGrid::CoordinateType NeighborCoords = GetNeighborCoordinates(*spSubgrid, sparseGrid, NeighborOffset);
                 
                 SubGridPtr spNeighbor;
                 if (gridGraph.QuerySubgrid(NeighborCoords, spNeighbor))
                 {
                     //
-                    // Nothing to do here, spNeighbor is set.
+                    // In this instance, subgrid neighbors a preexisting subgrid so there's no need to
+                    // create a new one. Worth noting that a subgrid may neighbor itself.
                     //
                 }
                 else
                 {
+                    //
+                    // It's possible that more than one subgrid will demand the same new neighbor.
+                    // In that case, we may have already created the neighbor and it lives in subgridPtrsOut.
+                    // Check for that here prior to deciding to create a new subgrid.
+                    //
                     auto it =
-                        std::find_if(subgridPtrs.begin(), subgridPtrs.end(), [&NeighborCoords](const SubGridPtr& spSubgrid)
+                        std::find_if(subgridPtrsOut.begin(), subgridPtrsOut.end(), [&NeighborCoords](const SubGridPtr& spSubgrid)
                         {
                             return spSubgrid->GetCoordinates() == NeighborCoords;
                         }); 
 
-                    if (it == subgridPtrs.end())
+                    if (it == subgridPtrsOut.end())
                     {
-                        subgridPtrs.emplace_back(
+                        subgridPtrsOut.emplace_back(
                             std::make_shared<SubGrid>(
-                                memoryPool, gridGraph,
+                                memoryPool, sparseGrid, gridGraph,
                                 NeighborCoords.first, NeighborCoords.second,
                                 spSubgrid->GetGeneration()
                             ));
-                        spNeighbor = subgridPtrs.back();
+                        spNeighbor = subgridPtrsOut.back();
                     }
                     else
                     {
@@ -113,15 +118,19 @@ namespace
         }
     }
 
+    //
+    // If a subgrid is worth retiring (has no more live cells or border cells),
+    // tack it onto the end of subgridPtrsOut for later processing.
+    //
     void MaybeRetireSubgrid(
         uint32_t numCells,
         GameOfLife::SubGridPtr spSubgrid,
-        std::vector<GameOfLife::SubGridPtr>& subgridPtrs
+        std::vector<GameOfLife::SubGridPtr>& subgridPtrsOut
         )
     {
         if (!numCells && !spSubgrid->HasBorderCells())
         {
-            subgridPtrs.push_back(spSubgrid);
+            subgridPtrsOut.push_back(spSubgrid);
         }
     }
 }
@@ -131,42 +140,64 @@ namespace GameOfLife
     SparseGrid::SparseGrid(
         const std::vector<Cell>& initialCells,
         Utility::AlignedMemoryPool<64>& memoryPool
-    )
-        : m_alignedPool(memoryPool), m_generationCount(0)
+    ) : m_alignedPool(memoryPool), m_generationCount(0)
     {
         assert(!initialCells.empty());
+
+        int64_t xMin = std::numeric_limits<int64_t>::max();
+        int64_t xMax = std::numeric_limits<int64_t>::min();
+        int64_t yMin = std::numeric_limits<int64_t>::max();
+        int64_t yMax = std::numeric_limits<int64_t>::min();
+
+        // 
+        // Determine the dimensions of the world space based on the incoming cells,
+        // though be sure to align min/max values with the subgrid corners.
+        //
+
         for (const Cell& cell : initialCells)
         {
-            int64_t subgridMinX;
-            int64_t subgridMinY;
+            if (cell.X < xMin) { xMin = cell.X; }
+            if (cell.X > xMax) { xMax = cell.X; }
+            if (cell.Y < yMin) { yMin = cell.Y; }
+            if (cell.Y > yMax) { yMax = cell.Y; }
+        }
 
+        //
+        // Snap state to subgrid boundaries.
+        //
+        xMin = SubGrid::SnapCoordinateToSubgridCorner(xMin, SubGrid::SUBGRID_WIDTH);
+        yMin = SubGrid::SnapCoordinateToSubgridCorner(yMin, SubGrid::SUBGRID_HEIGHT);
+
+        //
+        // Do the same for max values -- though max values are on the lower-right corner.
+        //
+        xMax = SubGrid::SnapCoordinateToSubgridCorner(xMax, SubGrid::SUBGRID_WIDTH);
+        xMax += SubGrid::SUBGRID_WIDTH;
+        yMax = SubGrid::SnapCoordinateToSubgridCorner(yMax, SubGrid::SUBGRID_HEIGHT);
+        yMax += SubGrid::SUBGRID_HEIGHT;
+
+        m_xMin  = xMin;
+        m_width = std::max(xMax - xMin, SubGrid::SUBGRID_WIDTH);
+        assert(!(m_width % SubGrid::SUBGRID_WIDTH));
+
+        m_yMin   = yMin;
+        m_height = std::max(yMax - yMin, SubGrid::SUBGRID_HEIGHT);
+        assert(!(m_height % SubGrid::SUBGRID_HEIGHT));
+
+        for (const Cell& cell : initialCells)
+        {
             //
             // Snap upper-left coordinates of subgrids to boundaries on SUBGRID_WIDTH
             // and SUBGRID_HEIGHT for x,y respectively.
             //
-            if (cell.X >= 0)
-            {
-                subgridMinX = cell.X - (cell.X % SubGrid::SUBGRID_WIDTH);
-            }
-            else
-            {
-                subgridMinX = cell.X - (SubGrid::SUBGRID_WIDTH + (cell.X % SubGrid::SUBGRID_WIDTH));
-            }
-
-            if (cell.Y >= 0)
-            {
-                subgridMinY = cell.Y - (cell.Y % SubGrid::SUBGRID_HEIGHT);
-            }
-            else
-            {
-                subgridMinY = cell.Y - (SubGrid::SUBGRID_HEIGHT + (cell.Y % SubGrid::SUBGRID_HEIGHT));
-            }
+            int64_t subgridMinX = SubGrid::SnapCoordinateToSubgridCorner(cell.X, SubGrid::SUBGRID_WIDTH);
+            int64_t subgridMinY = SubGrid::SnapCoordinateToSubgridCorner(cell.Y, SubGrid::SUBGRID_HEIGHT);
 
             SubGridPtr spSubgrid;
             if (!m_gridGraph.QuerySubgrid(std::make_pair(subgridMinX, subgridMinY), /* out */spSubgrid))
             {
                 auto spSubgrid = std::make_shared<SubGrid>(
-                        m_alignedPool, m_gridGraph,
+                        m_alignedPool, *this, m_gridGraph,
                         subgridMinX, subgridMinY
                     );
                 spSubgrid->RaiseCell(cell.X, cell.Y);
@@ -197,41 +228,6 @@ namespace GameOfLife
 
             throw std::exception("Unrecoverable: No subgrids created.");
         }
-
-        int64_t xMin = std::numeric_limits<int64_t>::max();
-        int64_t xMax = std::numeric_limits<int64_t>::min();
-        int64_t yMin = std::numeric_limits<int64_t>::max();
-        int64_t yMax = std::numeric_limits<int64_t>::min();
-
-        // 
-        // Determine the dimensions of the world space based on the constituent
-        // subgrids, assuming uniform size for all subgrids including the edges.
-        //
-
-        for (auto it = m_subgridStorage.begin(); it != m_subgridStorage.end(); ++it)
-        {
-            const SubGridPtr& spSubgrid = it->second;
-            if (spSubgrid->XMin() < xMin) { xMin = spSubgrid->XMin(); }
-            if (spSubgrid->XMin() > xMax) { xMax = spSubgrid->XMin(); }
-            if (spSubgrid->YMin() < yMin) { yMin = spSubgrid->YMin(); }
-            if (spSubgrid->YMin() > yMax) { yMax = spSubgrid->YMin(); }
-        }
-
-        //
-        // The above only accounts for upper-left corners of constituent
-        // subgrids; xMax and yMax refer to the maximum subgrid coordinates.
-        // For max cell coordinates, add width and height.
-        //
-        xMax += SubGrid::SUBGRID_WIDTH;
-        yMax += SubGrid::SUBGRID_HEIGHT;
-
-        m_xMin   = xMin;
-        m_width  = std::max(xMax - xMin, SubGrid::SUBGRID_WIDTH);
-        assert(!(m_width % SubGrid::SUBGRID_WIDTH));
-
-        m_yMin   = yMin;
-        m_height = std::max(yMax - yMin, SubGrid::SUBGRID_HEIGHT);
-        assert(!(m_height % SubGrid::SUBGRID_HEIGHT));
 
         //
         // Initialize subgrid neighbor relationships in the graph and create new
@@ -371,8 +367,8 @@ namespace GameOfLife
                 }
                 out << "\n";
             }
-            out.flush();
         }
+        out.flush();
 
         return out;
     }

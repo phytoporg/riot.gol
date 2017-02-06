@@ -32,7 +32,7 @@ int main(int argc, char** argv)
     int32_t generationsRemaining = atoi(argv[2]);
     std::string outputFilename(argv[3]);
 
-    GameOfLife::InitialState state;
+    GoLReference::InitialState state;
 
     char paren, comma;
     int64_t cellX, cellY;
@@ -42,9 +42,9 @@ int main(int argc, char** argv)
         state.emplace_back(cellX, cellY, false);
     }
 
-    GameOfLife::GameRunner runner(state);
+    GoLReference::GameRunner runner(state);
 
-    GameOfLife::FileStateRenderer renderer(outputFilename);
+    GoLReference::FileStateRenderer renderer(outputFilename);
     do
     {
         const auto& state = runner.CurrentState();

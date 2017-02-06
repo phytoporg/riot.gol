@@ -34,7 +34,6 @@ namespace GameOfLife
 {
     namespace Renderers
     {
-
         CinderRenderer::CinderRenderer()
             : m_isInitialized(false),
               m_takeSingleStep(false),
@@ -200,12 +199,13 @@ namespace GameOfLife
             gl::enableDepthRead();
             gl::enableDepthWrite();
 
-            m_camera.setOrtho(0, 1.0f, 1.0f, 0.0f, 0.1f, 1000.0f);
+            //m_camera.setOrtho(0, 1.0f, 1.0f, 0.0f, 0.1f, 1000.0f);
+            m_camera.setOrtho(0, m_spState->Width(), m_spState->Height(), 0.0f, 0.1f, 1000.0f);
 
             //
             // Center on the middle of the state grid.
             //
-            m_camera.lookAt(vec3(0, 0, 2.0f), vec3(0));
+            m_camera.lookAt(vec3(0, 0, 10.0f), vec3(0));
 
             m_progRef = gl::GlslProg::create(gl::GlslProg::Format()
                 .vertex(VERTEX_SHADER)
@@ -243,32 +243,20 @@ namespace GameOfLife
             gl::clear(Color(0.0f, 0.0f, 0.0f));
             gl::setMatrices(m_camera);
 
-            const float InvW = 1.0f / static_cast<float>(m_spState->Width());
-            const float XMinInvW = InvW * static_cast<float>(m_spState->XMin());
-            const float InvH = 1.0f / static_cast<float>(m_spState->Height());
-            const float YMinInvH = InvH * static_cast<float>(m_spState->YMin());
-
-            //
-            // This is *column* major. This normalizes what is otherwise a potentially
-            // very large grid and shifts coordinates to align with normalized window 
-            // pixel space.
-            //
-            const glm::mat3 StateTransform(
-                InvW,       0,        0,
-                0,          InvH,     0,
-                -XMinInvW, -YMinInvH, 0 // Zero here to annihilate the z-component;
-                );                      // all geometry lives on the x-y plane.
+            const double InvW = 1.0 / static_cast<double>(m_spState->Width());
+            const double XMinInvW = InvW * static_cast<double>(m_spState->XMin());
+            const double InvH = 1.0 / static_cast<double>(m_spState->Height());
+            const double YMinInvH = InvH * static_cast<double>(m_spState->YMin());
 
             gl::setMatrices(m_camera);
 
-            static const float CELL_WIDTH  = std::max(InvW, 0.01f) * getWindowAspectRatio();
-            static const float CELL_HEIGHT = std::max(InvH, 0.01f);
+            static const float CELL_WIDTH  = InvW * getWindowAspectRatio();
+            static const float CELL_HEIGHT = InvH;
 
             const float ElapsedTime = static_cast<float>(ci::app::getElapsedSeconds());
             const glm::vec2 Resolution(getWindowWidth(), getWindowHeight());
             for (size_t i = 0; i < m_meshesToDraw; i++)
             {
-                m_progRef->uniform("uStateTransform", StateTransform);
                 m_progRef->uniform("uElapsedTime", ElapsedTime);
                 m_progRef->uniform("uWindowRes", Resolution);
                 m_progRef->uniform("uCellWidth", CELL_WIDTH);

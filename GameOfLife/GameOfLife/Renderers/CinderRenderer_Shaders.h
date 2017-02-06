@@ -2,12 +2,11 @@
 
 const char* VERTEX_SHADER = CI_GLSL(150,
     uniform mat4    ciModelViewProjection;
-    uniform mat3    uStateTransform; 
     in vec2         ciPosition;
 
     void main(void)
     {
-        vec3 p = uStateTransform * vec3(ciPosition, 1.0);
+        vec3 p = vec3(ciPosition, 1.0);
         gl_Position = ciModelViewProjection * vec4(p, 1.0);
     });                                        
 

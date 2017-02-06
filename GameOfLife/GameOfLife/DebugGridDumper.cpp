@@ -11,7 +11,7 @@ namespace GameOfLife
     void DebugGridDumper::OpenFile(const std::string& filename)
     {
 #if defined(DEBUG)
-        if (!s_fileStream)
+        if (!s_fileStream.is_open())
         {
             s_fileStream.open(filename);
             assert(s_fileStream.good());

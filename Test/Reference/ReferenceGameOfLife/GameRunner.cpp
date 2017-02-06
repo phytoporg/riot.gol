@@ -6,17 +6,17 @@
 
 namespace
 {
-    GameOfLife::State* 
+    GoLReference::State* 
     OtherBuffer(
-        GameOfLife::State* pState,
-        const std::unique_ptr<GameOfLife::State>& spFirst,
-        const std::unique_ptr<GameOfLife::State>& spSecond
+        GoLReference::State* pState,
+        const std::unique_ptr<GoLReference::State>& spFirst,
+        const std::unique_ptr<GoLReference::State>& spSecond
     )
     {
         return pState == spFirst.get() ? spSecond.get() : spFirst.get();
     }
 
-    uint8_t CountNeighbors(const GameOfLife::State& state, int64_t x, int64_t y)
+    uint8_t CountNeighbors(const GoLReference::State& state, int64_t x, int64_t y)
     {
         uint8_t neighbors = 0;
 
@@ -43,7 +43,7 @@ namespace
     }
 }
 
-namespace GameOfLife
+namespace GoLReference
 {
     //
     // Internal state representation

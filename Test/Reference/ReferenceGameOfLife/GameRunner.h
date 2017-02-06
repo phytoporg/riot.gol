@@ -7,8 +7,11 @@
 #include "State.h"
 #include "InitialState.h"
 
-namespace GameOfLife
+namespace GoLReference
 {
+    //
+    // The "driver" class which advances the internal state.
+    //
     class GameRunner
     {
     public:

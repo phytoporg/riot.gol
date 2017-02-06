@@ -1,0 +1,8 @@
+Here be the test scripts!
+
+The only real script of interest is gol_test_suite.py, which is the primary entry point.
+Various parameters for running the tests can be found within that file, but otherwise running it is pretty straightforward:
+
+python gol_test_suite path\to\reference.exe path\to\gameoflife.exe optional_number_of_tests_to_run
+
+Requires that numpy be installed, but otherwise naked python should do the trick. 

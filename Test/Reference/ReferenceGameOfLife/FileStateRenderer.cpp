@@ -1,10 +1,15 @@
 #include "FileStateRenderer.h"
 
-namespace GameOfLife
+namespace GoLReference
 {
     FileStateRenderer::FileStateRenderer(const std::string& filename)
         : m_fileOut(filename)
     {}
+
+    FileStateRenderer::~FileStateRenderer()
+    {
+        m_fileOut.flush();
+    }
 
     std::ostream& FileStateRenderer::operator<<(const State& state)
     {

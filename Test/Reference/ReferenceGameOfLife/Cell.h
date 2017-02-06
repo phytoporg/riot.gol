@@ -3,7 +3,7 @@
 #include <tuple>
 #include <cstdint>
 
-namespace GameOfLife
+namespace GoLReference
 {
     struct Cell
     {

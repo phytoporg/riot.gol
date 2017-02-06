@@ -59,8 +59,43 @@ namespace GameOfLife
         static const int64_t SUBGRID_WIDTH = 30;
         static const int64_t SUBGRID_HEIGHT = 30;
 
+        //
+        // Particularly helpful during initialization-- takes as input a cell
+        // coordinate in world space and returns the subgrid coordinates it
+        // belongs to.
+        //
+        // The implementation is inlined here for easy access from the reference
+        // implementation. This is the only commonality at the moment; any more
+        // and this can probably just be factored out into a separate library.
+        //
+        static int64_t SubGrid::SnapCoordinateToSubgridCorner(int64_t value, int64_t max)
+        {
+            int64_t newValue;
+
+            if (value >= 0)
+            {
+                //
+                // For positive values and zero, just remove the remainder to
+                // snap back to the next least integer modulo max.
+                //
+                newValue = value - (value % max);
+            }
+            else
+            {
+                //
+                // Negative values are a little trickier; the intent here is still
+                // to get the next-least integer modulo max, but modulus doesn't
+                // do what we need when operating on negative values.
+                //
+                newValue = ((value + 1) / max - 1) * max;
+            }
+
+            return newValue;
+        }
+
         SubGrid(
             Utility::AlignedMemoryPool<64>& memoryPool, 
+            const RectangularGrid& worldBounds,
             SubGridGraph& graph,
             int64_t xmin, int64_t ymin,
             uint32_t generation = 0
@@ -109,7 +144,10 @@ namespace GameOfLife
         // Copies border cells of a neighbor according to its adjacency.
         //
         void CopyBorder(const SubGrid& other, AdjacencyIndex adjacency);
-        void PublishBorder(SubGrid& other, AdjacencyIndex adjacency);
+
+        //
+        // Sets border cells to zero.
+        //
         void ClearBorder(AdjacencyIndex adjacency);
 
     private:
@@ -195,6 +233,11 @@ namespace GameOfLife
         // For rendering. Only contains set cell coordinates.
         //
         std::vector<VertexType> m_vertexData;
+
+        //
+        // For debugging and for updating values in the vertex buffer.
+        //
+        const RectangularGrid& m_worldBounds;
     };
 
     //

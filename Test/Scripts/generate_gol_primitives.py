@@ -54,7 +54,7 @@ def rotate_primitive(primitive, rotations):
     return None
 
 
-def main(primitive_name, x, y, rotations=0):
+def generate_primitive(primitive_name, x, y, rotations=0):
     global primitives_dict
     if primitive_name not in primitives_dict:
         print "Invalid primitive: {0}".format(primitive_name)
@@ -65,12 +65,13 @@ def main(primitive_name, x, y, rotations=0):
         primitive = rotate_primitive(primitive, rotations)
 
     primitive = [(offx + x, offy + y) for offx, offy in primitive]
-    for t in primitive:
-        print "({0},{1})".format(t[0], t[1])
+    return primitive
 
 if __name__=="__main__":
     if len(sys.argv) < 2:
         print_usage(sys.argv[0])
     else:
         rotations = 0 if not len(sys.argv) > 4 else int(sys.argv[4])
-        main(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), rotations)
+        primitive = generate_primitive(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), rotations)
+        for t in primitive:
+            print "({0},{1})".format(t[0], t[1])

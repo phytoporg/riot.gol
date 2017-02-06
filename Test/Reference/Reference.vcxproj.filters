@@ -9,9 +9,6 @@
     <ClInclude Include="ReferenceGameOfLife\Cell.h">
       <Filter>ReferenceGameOfLife</Filter>
     </ClInclude>
-    <ClInclude Include="ReferenceGameOfLife\ConsoleStateRenderer.h">
-      <Filter>ReferenceGameOfLife</Filter>
-    </ClInclude>
     <ClInclude Include="ReferenceGameOfLife\FileStateRenderer.h">
       <Filter>ReferenceGameOfLife</Filter>
     </ClInclude>
@@ -26,9 +23,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ReferenceGameOfLife\ConsoleStateRenderer.cpp">
-      <Filter>ReferenceGameOfLife</Filter>
-    </ClCompile>
     <ClCompile Include="ReferenceGameOfLife\FileStateRenderer.cpp">
       <Filter>ReferenceGameOfLife</Filter>
     </ClCompile>

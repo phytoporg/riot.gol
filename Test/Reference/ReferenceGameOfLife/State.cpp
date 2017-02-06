@@ -1,5 +1,7 @@
 #include "State.h"
 
+#include <GameOfLife/SubGrid.h>
+
 #include <limits>
 #include <algorithm>
 
@@ -35,7 +37,7 @@ namespace
     }
 }
 
-namespace GameOfLife
+namespace GoLReference
 {
     State::State(const InitialState & initialCells)
         : m_xMin(std::numeric_limits<int64_t>::max()),
@@ -78,44 +80,14 @@ namespace GameOfLife
         //
         // Snap state to subgrid boundaries.
         //
-        if (m_xMin >= 0)
-        {
-            m_xMin = m_xMin - (m_xMin % 30);
-        }
-        else
-        {
-            m_xMin = m_xMin - (30 + (m_xMin % 30));
-        }
+        using SubGrid = GameOfLife::SubGrid;
+        m_xMin = SubGrid::SnapCoordinateToSubgridCorner(m_xMin, SubGrid::SUBGRID_WIDTH);
+        m_yMin = SubGrid::SnapCoordinateToSubgridCorner(m_yMin, SubGrid::SUBGRID_HEIGHT);
 
-        if (m_yMin >= 0)
-        {
-            m_yMin = m_yMin - (m_yMin % 30);
-        }
-        else
-        {
-            m_yMin = m_yMin - (30 + (m_yMin % 30));
-        }
-
-        //
-        // Do the same for max values
-        //
-        if (xMax >= 0)
-        {
-            xMax = xMax - (xMax % 30) + 30;
-        }
-        else
-        {
-            xMax = xMax - (30 + (xMax % 30)) + 30;
-        }
-
-        if (yMax >= 0)
-        {
-            yMax = yMax - (yMax % 30) + 30;
-        }
-        else
-        {
-            yMax = yMax - (30 + (yMax % 30)) + 30;
-        }
+        xMax = SubGrid::SnapCoordinateToSubgridCorner(xMax, SubGrid::SUBGRID_WIDTH);
+        xMax += SubGrid::SUBGRID_WIDTH;
+        yMax = SubGrid::SnapCoordinateToSubgridCorner(yMax, SubGrid::SUBGRID_HEIGHT);
+        yMax += SubGrid::SUBGRID_HEIGHT;
 
         m_width = xMax - m_xMin;
         m_height = yMax - m_yMin;
@@ -211,8 +183,6 @@ namespace GameOfLife
             }
             out << "\n";
         }
-
-        out.flush();
 
         return out;
     }

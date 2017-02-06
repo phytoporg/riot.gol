@@ -25,24 +25,16 @@ namespace
         int64_t y
         )
     {
+        using namespace GameOfLife;
         uint8_t neighbors = 0;
 
-        for (int64_t dy = -1; dy <= 1; ++dy)
+        for (int i = 0; i < GameOfLife::AdjacencyIndex::MAX; ++i)
         {
-            for (int64_t dx = -1; dx <= 1; ++dx)
+            const auto Adjacency = static_cast<AdjacencyIndex>(i);
+            SubGrid::CoordinateType offset = SubGridGraph::GetNeighborPositionFromIndex(Adjacency);
+            if (subGrid.GetCellState(x + offset.first, y + offset.second))
             {
-                if (!dx && !dy) 
-                {
-                    //
-                    // Don't count self!
-                    //
-                    continue; 
-                }
-
-                if (subGrid.GetCellState(x + dx, y + dy))
-                {
-                    neighbors++;
-                }
+                neighbors++;
             }
         }
 
@@ -54,6 +46,7 @@ namespace GameOfLife
 {
     SubGrid::SubGrid(
         Utility::AlignedMemoryPool<64>& memoryPool,
+        const RectangularGrid& worldBounds,
         SubGridGraph& graph, 
         int64_t xmin, int64_t ymin,
         uint32_t generation
@@ -61,7 +54,8 @@ namespace GameOfLife
         : RectangularGrid(xmin, SubGrid::SUBGRID_WIDTH, ymin, SubGrid::SUBGRID_HEIGHT),
           m_generation(generation),
           m_pGridGraph(&graph),
-          m_memoryPool(memoryPool)
+          m_memoryPool(memoryPool),
+          m_worldBounds(worldBounds)
     {
         m_vertexData.reserve(SUBGRID_WIDTH * SUBGRID_HEIGHT);
 
@@ -100,7 +94,12 @@ namespace GameOfLife
     void SubGrid::RaiseCell(uint8_t* pGrid, int64_t x, int64_t y)
     {
         pGrid[GetOffset(x, y)] = true;
-        m_vertexData.emplace_back(x, y);
+
+        //
+        // This should only be called when updating state; so we know to add a vertex
+        // here. It's assumed that this buffer is cleared out when advancing generations.
+        //
+        m_vertexData.emplace_back(x - m_worldBounds.XMin(), y - m_worldBounds.YMin());
     }
 
     void SubGrid::RaiseCell(int64_t x, int64_t y)
@@ -193,6 +192,15 @@ namespace GameOfLife
 
     bool SubGrid::HasBorderCells() const
     {
+        //
+        // We use this type to process as many cells as possible per
+        // loop iteration, casting the byte type to an int64_t and 
+        // checking against 0.
+        //
+        // That optimization is only available for rows, not columns,
+        // whose elements aren't contiguous in memory.
+        //
+
         typedef int64_t SkipPtrType;
 
         //
@@ -241,7 +249,6 @@ namespace GameOfLife
                 }
             }
         }
-
 
         //
         // Left
@@ -340,8 +347,8 @@ namespace GameOfLife
         m_pCurrentCellGrid = pOtherGrid;
 
         //
-        // Need to copy border states to new generation grid as well to correctly
-        // identify new neighbors to create after this generation has completed.
+        // Need to copy border states to new generation grid here as well to correctly
+        // identify new neighbors after this generation has completed.
         //
         for (int i = 0; i < AdjacencyIndex::MAX; ++i)
         {
@@ -359,8 +366,8 @@ namespace GameOfLife
             m_generation - 1,
             GetCoordinates(),
             *this,
-            m_pCurrentCellGrid,
-            OtherPointer(m_pCurrentCellGrid, m_pCellGrids[0], m_pCellGrids[1])
+            OtherPointer(m_pCurrentCellGrid, m_pCellGrids[0], m_pCellGrids[1]),
+            m_pCurrentCellGrid
         );
 
         return static_cast<uint32_t>(m_vertexData.size());
@@ -392,22 +399,33 @@ namespace GameOfLife
 
         switch (adjacency)
         {
+        //
+        // Cheating a little here, since the corner cases have many caveats and to check
+        // for absolute necessity would mean to look at non-neighboring subgrids as well.
+        // Take a conservative strategy here and create a corner neighbor if any cells
+        // surrounding it are live.
+        //
         case GameOfLife::TOP_LEFT:
-            return GetCellState(BufferLeftX, TopY) && 
-                   GetCellState(LeftX, TopY) &&
+            return GetCellState(BufferLeftX, TopY) || 
+                   GetCellState(LeftX, TopY) ||
                    GetCellState(LeftX, BufferTopY);
         case GameOfLife::TOP_RIGHT:
-            return GetCellState(BufferRightX, TopY) && 
-                   GetCellState(RightX, TopY) &&
+            return GetCellState(BufferRightX, TopY) || 
+                   GetCellState(RightX, TopY) ||
                    GetCellState(BufferRightX, BufferTopY);
         case GameOfLife::BOTTOM_LEFT:
-            return GetCellState(BufferLeftX, BottomY) && 
-                   GetCellState(LeftX, BottomY) &&
+            return GetCellState(BufferLeftX, BottomY) || 
+                   GetCellState(LeftX, BottomY) ||
                    GetCellState(LeftX, BufferBottomY);
         case GameOfLife::BOTTOM_RIGHT:
-            return GetCellState(BufferRightX, BottomY) && 
-                   GetCellState(RightX, BottomY) &&
+            return GetCellState(BufferRightX, BottomY) || 
+                   GetCellState(RightX, BottomY) ||
                    GetCellState(RightX, BufferTopY);
+        //
+        // For strict cardinal directions, it is sufficient to determine whether or not a
+        // new neighbor needs to exist if three consecutive live cells are found, 
+        // including the ghost buffers.
+        //
         case GameOfLife::TOP:
         {
             uint8_t* pStart = &m_pCurrentCellGrid[GetOffset(BufferLeftX, TopY)];
@@ -519,7 +537,8 @@ namespace GameOfLife
     {
         //
         // Use the proper grid pointer for our neighbor's data. TODO: 
-        // interface should refer to generation. This is clunky.
+        // interface should refer to generation rather than checking pointers
+        // like this. This is clunky.
         //
         uint8_t* pNeighborGrid = other.m_pCurrentCellGrid;
         if (other.m_generation > m_generation)
@@ -596,83 +615,6 @@ namespace GameOfLife
                     pNeighborGrid,
                     other.XMin(),
                     other.YMin()
-                    );
-            break;
-        default:
-            assert(false);
-            break;
-        }
-    }
-
-    void SubGrid::PublishBorder(SubGrid& other, AdjacencyIndex adjacency)
-    {
-        assert(m_generation == other.m_generation);
-        uint8_t* pNeighborGrid = other.m_pCurrentCellGrid;
-
-        switch (adjacency)
-        {
-        case AdjacencyIndex::TOP_LEFT:
-            pNeighborGrid[other.GetOffset(other.XMin() - 1, other.YMin() - 1)] = 
-                GetCellState(
-                    m_pCurrentCellGrid,
-                    XMin() + Width()  - 1,
-                    YMin() + Height() - 1
-                    );
-            break;
-        case AdjacencyIndex::TOP:
-            CopyRowFrom(
-                *this, m_pCurrentCellGrid,
-                other, pNeighborGrid,
-                YMin() + Height() - 1,
-                other.YMin() - 1
-                );
-            break;
-        case AdjacencyIndex::TOP_RIGHT:
-            pNeighborGrid[other.GetOffset(other.XMin() + other.Width(), other.YMin() - 1)] = 
-                GetCellState(
-                    m_pCurrentCellGrid,
-                    XMin(),
-                    YMin() + Height() - 1
-                    );
-            break;
-        case AdjacencyIndex::LEFT:
-            CopyColumnFrom(
-                *this, m_pCurrentCellGrid,
-                other, pNeighborGrid,
-                XMin() + Width() - 1,
-                other.XMin() - 1
-                );
-            break;
-        case AdjacencyIndex::RIGHT:
-            CopyColumnFrom(
-                *this, m_pCurrentCellGrid,
-                other, pNeighborGrid,
-                XMin(),
-                other.XMin() + other.Width()
-                );
-            break;
-        case AdjacencyIndex::BOTTOM_LEFT:
-            pNeighborGrid[other.GetOffset(other.XMin() - 1, other.YMin() + other.Height())] = 
-                GetCellState(
-                    m_pCurrentCellGrid,
-                    XMin() + Width() - 1,
-                    YMin()
-                    );
-            break;
-        case AdjacencyIndex::BOTTOM:
-            CopyRowFrom(
-                *this, m_pCurrentCellGrid,
-                other, pNeighborGrid,
-                YMin(),
-                other.YMin() + other.Height()
-                );
-            break;
-        case AdjacencyIndex::BOTTOM_RIGHT:
-            pNeighborGrid[other.GetOffset(other.XMin() + other.Width(), other.YMin() + other.Height())] = 
-                GetCellState(
-                    m_pCurrentCellGrid,
-                    XMin() + Width()  - 1,
-                    YMin() + Height() - 1
                     );
             break;
         default:
