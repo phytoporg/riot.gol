@@ -21,10 +21,12 @@ class GolValidator:
         ref_out = join(temp_dir, "ref_output.txt")
         ref_args = [self.ref_exe, input_file, generations, ref_out]
         ref_p = subprocess.Popen(ref_args)
+        print "Reference output to {0}".format(ref_out)
 
         test_out = join(temp_dir, "test_output.txt")
         test_args = [self.test_exe, input_file, generations, test_out] 
         test_p = subprocess.Popen(test_args)
+        print "Test target output to {0}".format(test_out)
 
         ref_p.wait()
         test_p.wait()
@@ -51,17 +53,17 @@ class GolValidator:
         xmin,ymin,width,height = [int(d) for d in first_line.translate(None, '()').split(',')]
         generation = int(handle.readline())
 
-        flattened_buffer = []
-        for x in range(height):
-            flattened_buffer.extend([int(cell) for cell in handle.readline().split(',')])
+        state_matrix = np.zeros((height,width), np.int8)
+        for y in range(height):
+            state_matrix[y,:] = [int(cell) for cell in handle.readline().split(',')]
 
         return {
-                "generation" : generation,
-                "buffer"     : flattened_buffer, 
-                "xmin"       : xmin,
-                "ymin"       : ymin,
-                "width"      : width,
-                "height"     : height
+                "generation"   : generation,
+                "state_matrix" : state_matrix, 
+                "xmin"         : xmin,
+                "ymin"         : ymin,
+                "width"        : width,
+                "height"       : height
                 }
 
     def __read_testtarget_state(self, handle):
@@ -74,36 +76,53 @@ class GolValidator:
         generation = int(handle.readline())
 
         # Create appropriately sized buffer of zeros
-        buffer_2d = np.zeros((height, width))
+        state_matrix = np.zeros((height, width), np.int8)
         
         # Next line should contain the # of subgrids
-        for i in range(int(handle.readline())):
+        num_subgrids = int(handle.readline())
+        for i in range(num_subgrids):
             s_xmin,s_ymin,s_width,s_height = [int(d) for d in handle.readline().translate(None, "()").split(',')]
             for j in range(s_height):
-                slice_x_start = s_xmin - xmin
                 slice_y       = s_ymin - ymin + j
+                slice_x_start = s_xmin - xmin
                 slice_x_end   = slice_x_start + s_width
-                buffer_2d[slice_y, slice_x_start:slice_x_end] = [int(cell) for cell in handle.readline().split(',')]
+                state_matrix[slice_y, slice_x_start:slice_x_end] = [int(cell) for cell in handle.readline().split(',')]
 
         return {
-                "generation" : generation,
-                "buffer"     : buffer_2d.flatten().tolist(), 
-                "xmin"       : xmin,
-                "ymin"       : ymin,
-                "width"      : width,
-                "height"     : height
+                "generation"   : generation,
+                "state_matrix" : state_matrix, 
+                "xmin"         : xmin,
+                "ymin"         : ymin,
+                "width"        : width,
+                "height"       : height
                }
 
     def __compare_states(self, ref_state, testtarget_state):
         keys = ref_state.keys()
         for key in keys:
-            if key == "buffer":
-                for pair in zip(ref_state[key],testtarget_state[key]):
+            if key == "state_matrix":
+                for pair in zip(ref_state[key].flatten(),testtarget_state[key].flatten()):
                     if pair[0] != pair[1]:
                         print "Mismatch in state representation. Check generation {0}".format(ref_state["generation"])
+
+                        bad_test_outfile = "bad_test_gen_{0}.txt".format(ref_state["generation"])
+                        print "Writing mismatched test target state to {0}".format(bad_test_outfile)
+
+                        state_matrix = testtarget_state["state_matrix"]
+                        height, width = state_matrix.shape
+                        print str(state_matrix[0,0])
+                        with open(bad_test_outfile, 'w') as fw:
+                            for row in range(height):
+                                for col in range(width):
+                                    fw.write(str(state_matrix[row,col]))
+                                    if col < width - 1:
+                                        fw.write(',')
+                                fw.write('\n')
+                        
                         return False
+
             elif ref_state[key] != testtarget_state[key]:
-                print "Mismatch at key {0}!".format(key)
+                print "Mismatch at {0}!".format(key)
                 print "ref_state = {0}".format(ref_state)
                 print "testtarget_state_state = {0}".format(testtarget_state)
                 return False

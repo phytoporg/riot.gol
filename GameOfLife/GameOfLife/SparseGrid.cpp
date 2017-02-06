@@ -29,50 +29,23 @@ namespace
         const int64_t SubgridMinY = subgrid.GetCoordinates().second;
 
         int64_t neighborX = SubgridMinX + dx * GameOfLife::SubGrid::SUBGRID_WIDTH;
-        if (neighborX >= XMax)        
-        { 
-            neighborX = stateDimensions.XMin(); 
+        if (neighborX < stateDimensions.XMin())
+        {
+            neighborX = XMax - GameOfLife::SubGrid::SUBGRID_WIDTH;
         }
-        else if (neighborX < stateDimensions.XMin()) {
-            //
-            // The divide and multiply might look redundant, but the divide serves
-            // also to shave off any remainder. This expression puts neighborX at
-            // the x-coordinate of the left of the right-most subgrid in the full
-            // state space.
-            //
-            neighborX =
-                stateDimensions.XMin() +
-                (stateDimensions.Width() / GameOfLife::SubGrid::SUBGRID_WIDTH) *
-                GameOfLife::SubGrid::SUBGRID_WIDTH; 
-
-            if (neighborX >= XMax)
-            {
-                //
-                // If neighborX is still too large, then the full world is only
-                // one subgrid wide and neighborX == X
-                //
-                neighborX = SubgridMinX;
-            }
+        else if (neighborX == XMax)
+        {
+            neighborX = stateDimensions.XMin();
         }
 
         int64_t neighborY = SubgridMinY + dy * GameOfLife::SubGrid::SUBGRID_HEIGHT;
-        if (neighborY >= YMax)        
-        { 
-            neighborY = stateDimensions.YMin(); 
+        if (neighborY < stateDimensions.YMin())
+        {
+            neighborY = YMax - GameOfLife::SubGrid::SUBGRID_HEIGHT;
         }
-        else if (neighborY < stateDimensions.YMin()) 
-        { 
-            neighborY = stateDimensions.YMin() + 
-                (stateDimensions.Height() / GameOfLife::SubGrid::SUBGRID_HEIGHT) *
-                GameOfLife::SubGrid::SUBGRID_HEIGHT; 
-
-            if (neighborY >= YMax)
-            {
-                //
-                // Same as in x-case. If neighborY is still too large, neighborY == Y
-                //
-                neighborY = SubgridMinY;
-            }
+        else if (neighborY == YMax)
+        {
+            neighborY = stateDimensions.YMin();
         }
 
         return std::make_pair(neighborX, neighborY);
@@ -166,6 +139,11 @@ namespace GameOfLife
         {
             int64_t subgridMinX;
             int64_t subgridMinY;
+
+            //
+            // Snap upper-left coordinates of subgrids to boundaries on SUBGRID_WIDTH
+            // and SUBGRID_HEIGHT for x,y respectively.
+            //
             if (cell.X >= 0)
             {
                 subgridMinX = cell.X - (cell.X % SubGrid::SUBGRID_WIDTH);
@@ -239,11 +217,21 @@ namespace GameOfLife
             if (spSubgrid->YMin() > yMax) { yMax = spSubgrid->YMin(); }
         }
 
+        //
+        // The above only accounts for upper-left corners of constituent
+        // subgrids; xMax and yMax refer to the maximum subgrid coordinates.
+        // For max cell coordinates, add width and height.
+        //
+        xMax += SubGrid::SUBGRID_WIDTH;
+        yMax += SubGrid::SUBGRID_HEIGHT;
+
         m_xMin   = xMin;
-        m_width  = std::max(xMax - xMin + 1, SubGrid::SUBGRID_WIDTH);
+        m_width  = std::max(xMax - xMin, SubGrid::SUBGRID_WIDTH);
+        assert(!(m_width % SubGrid::SUBGRID_WIDTH));
 
         m_yMin   = yMin;
-        m_height = std::max(yMax - yMin + 1, SubGrid::SUBGRID_HEIGHT);
+        m_height = std::max(yMax - yMin, SubGrid::SUBGRID_HEIGHT);
+        assert(!(m_height % SubGrid::SUBGRID_HEIGHT));
 
         //
         // Initialize subgrid neighbor relationships in the graph and create new

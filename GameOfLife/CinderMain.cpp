@@ -168,6 +168,12 @@ namespace GameOfLife
             if (args.size() > 3)
             {
                 m_spFileStateRenderer.reset(new FileStateRenderer(args[3]));
+
+                //
+                // If we're rendering to file, this is likely a test and there's
+                // no need to wait for user interaction to continue.
+                //
+                m_gameState = PLAYING;
             }
 
             std::vector<GameOfLife::Cell> cells;
