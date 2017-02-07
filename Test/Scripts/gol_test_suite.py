@@ -20,8 +20,8 @@ DEFAULT_NUM_GENERATIONS=100
 # It's also easier to debug failures if these are smaller; just crank
 # up the number of tests to get adequate coverage.
 #
-DEFAULT_WIDTH=30
-DEFAULT_HEIGHT=30
+DEFAULT_WIDTH=100
+DEFAULT_HEIGHT=100
 
 # 
 # GolTestSuite is a quick helper class which will:
@@ -67,7 +67,7 @@ class GolTestSuite:
             print "{0}: Succeeded".format(test_index)
 
         os.close(filedesc)
-	os.remove(filepath)
+        os.remove(filepath)
 
     def run_tests(self):
         for test_index in range(self.num_tests):

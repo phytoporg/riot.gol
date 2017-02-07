@@ -26,20 +26,19 @@ class GolValidator:
     def run_test(self, input_file, generations):
 	print "Test input file path: {0}".format(input_file)
         assert(isfile(input_file))
-
         generations = str(generations)
 
         temp_dir = tempfile.mkdtemp()
     
         ref_out = join(temp_dir, "ref_output.txt")
         ref_args = [self.ref_exe, input_file, generations, ref_out]
-	print "Args to reference: {0}".format(ref_args)
+        print "Args to reference: {0}".format(ref_args)
         ref_p = subprocess.Popen(ref_args)
         print "Reference output to {0}".format(ref_out)
 
         test_out = join(temp_dir, "test_output.txt")
         test_args = [self.test_exe, input_file, generations, test_out] 
-	print "Arguments to test target: {0}".format(test_args)
+        print "Arguments to test target: {0}".format(test_args)
         test_p = subprocess.Popen(test_args)
         print "Test target output to {0}".format(test_out)
 
@@ -133,18 +132,20 @@ class GolValidator:
         keys = ref_state.keys()
         for key in keys:
             if key == "state_matrix":
-		# If we fail here, we can dump out some useful debugging info.
+                # If we fail here, we can dump out some useful debugging info.
                 for pair in zip(ref_state[key].flatten(),testtarget_state[key].flatten()):
                     if pair[0] != pair[1]:
                         print "Mismatch in state representation. Check generation {0}".format(ref_state["generation"])
 
-                        bad_test_outfile = "bad_test_gen_{0}.txt".format(ref_state["generation"])
-                        print "Writing mismatched test target state to {0}".format(bad_test_outfile)
-
                         state_matrix = ref_state["state_matrix"]
-                        self.__dump_state_matrix(state_matrix, "bad_ref_gen_{0}.txt".format(ref_state["generation"]))
+                        bad_ref_outfile = "bad_ref_gen_{0}.txt".format(ref_state["generation"])
+                        print "Writing mismatched test target state to {0}".format(bad_ref_outfile)
+                        self.__dump_state_matrix(state_matrix, bad_ref_outfile)
+
                         state_matrix = testtarget_state["state_matrix"]
-                        self.__dump_state_matrix(state_matrix, "bad_test_gen_{0}.txt".format(testtarget_state["generation"]))
+                        bad_test_outfile = "bad_test_gen_{0}.txt".format(testtarget_state["generation"])
+                        print "Writing mismatched test target state to {0}".format(bad_test_outfile)
+                        self.__dump_state_matrix(state_matrix, bad_test_outfile)
                         
                         return False
 
